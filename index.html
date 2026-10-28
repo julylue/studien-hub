@@ -801,11 +801,15 @@ async function initDb(){
     }
     try{db.collection("inbox").onSnapshot(qs=>{INBOX=qs.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id},JSON.parse(JSON.stringify(d.data()))));injectInbox();render();},()=>{});}catch(e){}
     const snap=await db.doc("hub/state").get();
-    if(snap.exists){const r=JSON.parse(JSON.stringify(snap.data()));migrateSlots(r);if(!S.updated||(r.updated||0)>=S.updated){S=Object.assign({v:1,done:{},port:{},wk:{},exam:"2027-03-01"},r);S.wk=S.wk||{};}else dirty.add("state");}
+    /* Erste Verbindung dieses Geräts mit der Tabelle: die Tabelle gewinnt, damit ein leerer Gerätestand nie den echten Stand überschreibt. */
+    let wpFirst=false;if(wpOn()){try{wpFirst=!localStorage.getItem("hub-wp-linked");}catch(e){}}
+    if(snap.exists){const r=JSON.parse(JSON.stringify(snap.data()));migrateSlots(r);if(wpFirst||!S.updated||(r.updated||0)>=S.updated){S=Object.assign({v:1,done:{},port:{},wk:{},exam:"2027-03-01"},r);S.wk=S.wk||{};}else dirty.add("state");}
     else if(Object.keys(S.done).length||Object.keys(S.port).length)dirty.add("state");
     const q=await db.collection("cards").get();
+    if(wpFirst)CS={};
     q.docs.forEach(d=>{const r=JSON.parse(JSON.stringify(d.data()||{}));const loc=CS[d.id]||{};const rem=r.c||{};const out={...loc};for(const [id,arr] of Object.entries(rem)){if(!out[id]||arr[3]>out[id][3])out[id]=arr;}CS[d.id]=out;if(JSON.stringify(out)!==JSON.stringify(rem))dirty.add(d.id);});
     Object.keys(CS).forEach(k=>{if(!q.docs.some(d=>d.id===k)&&Object.keys(CS[k]).length)dirty.add(k);});
+    if(wpOn()&&!WP.err){try{localStorage.setItem("hub-wp-linked","1");}catch(e){}}
     lsSave(); setSync(wpOn()&&WP.err?"Nur hier gespeichert":"Auf allen Geräten gleich"); if(dirty.size)flush(); stateReady=true; injectInbox(); render();
 
   }catch(e){setSync("Nur hier gespeichert");stateReady=true;render();}
