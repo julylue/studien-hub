@@ -189,7 +189,10 @@ function overdue(){return st.zp.filter(zpLate);}
 /* ---------- Als Nächstes ---------- */
 function queueList(){
   const wk=iso(monday(new Date()));
-  const rows=st.rows.filter(r=>!isDone(r)&&d10(r.woche)<=wk);
+  // Abrufrunde höchstens einmal pro Tag und erst ab ihrem Fälligkeitstag
+  const isAbruf=r=>/^abruf/i.test(String(r.art||""));
+  const abrufToday=st.rows.some(r=>isAbruf(r)&&isDone(r)&&d10(r.erledigt_am)===TODAY());
+  const rows=st.rows.filter(r=>!isDone(r)&&d10(r.woche)<=wk&&!(isAbruf(r)&&(abrufToday||(r.faellig&&d10(r.faellig)>TODAY()))));
   const linked=new Set(st.rows.filter(r=>!isDone(r)).map(r=>String(r.baustein||"")));
   // Was laut Uni überfällig ist, aber noch nicht im Wochenplan steht, kommt trotzdem auf die Liste
   const extra=overdue().filter(z=>!linked.has(String(z.id))).map(z=>({id:"zp:"+z.id,schritt:z.titel,kurs:z.kurs,baustein:z.id,notiz:z.hinweis||"",rang:50,prioritaet:"Pflicht",status:"offen",_zp:true}));
