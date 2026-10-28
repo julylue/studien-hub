@@ -1,6 +1,10 @@
 # Studien-Hub
 
-Persönliches Lern-Dashboard (B.Sc. Psychologie, FernUni Hagen). Läuft auf GitHub Pages.
+Persönliches Lern-Dashboard (B.Sc. Psychologie, FernUni Hagen), läuft auf GitHub Pages.
+Eine Seite: Als Nächstes, Fristen, diese Woche, Stand je Kurs, zuletzt erledigt.
 
-Wichtig: Dieses Repo ist öffentlich. Nie Schlüssel, Skript-URLs, private Links oder Namen hier ablegen.
-Private Links stehen als Platzhalter `link:L001` usw. im Code; die echten Adressen liegen in der privaten Google-Tabelle "Studien-Hub Wochenplan" (Blatt "links").
+Daten: private Google-Tabelle "Studien-Hub Wochenplan" (Blätter wochenplan, kurse, links), angebunden über ein Google-Skript.
+Zugang nur über den persönlichen Link mit Schlüssel.
+
+Wichtig: Dieses Repo ist öffentlich. Nie Schlüssel, private Links oder Namen hier ablegen.
+Der frühere, umfangreiche Hub liegt im Git-Verlauf (Commit 38896ab).
