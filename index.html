@@ -117,6 +117,13 @@ h1.head{margin:24px 0 0;font-size:36px;line-height:1.12;font-weight:800;letter-s
 .keyf{margin-top:40px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px}
 .keyf p{margin:10px 0 14px;font-size:15px;color:var(--muted);line-height:1.4}
 .keyf input{width:100%;font:inherit;font-size:16px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.main{overscroll-behavior-y:contain}
+.ptr{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);width:36px;height:36px;margin-left:-18px;border-radius:50%;
+  background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;
+  transform:translateY(-60px);opacity:0;z-index:4;pointer-events:none}
+.ptr svg{width:18px;height:18px;color:var(--ink)}
+.ptr.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);transform:translate(-50%,16px);opacity:0;background:var(--btn);color:var(--btn-ink);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;transition:all .2s;pointer-events:none;z-index:9}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
@@ -128,6 +135,7 @@ h1.head{margin:24px 0 0;font-size:36px;line-height:1.12;font-weight:800;letter-s
     <a href="#" id="n1">Als Nächstes</a><a href="#zeitplan" id="n2">Zeitplan</a>
   </div></nav>
   <div id="ov"></div>
+  <div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg></div>
 </div>
 <div class="toast" id="toast"></div>
 <script>
@@ -331,6 +339,21 @@ document.addEventListener("submit",e=>{
   if(!v)return;st.key=v;try{localStorage.setItem("hub-key",v);}catch(_){}
   st.net="";render();sync().then(ok=>toast(ok?"Verbunden":"Schlüssel passt nicht"));
 });
+/* Zum Aktualisieren herunterziehen */
+(function(){
+  const m=$("#main"),p=$("#ptr"),MAX=90,GO=64;let y0=null,dy=0,busy=false;
+  const set=(d,anim)=>{m.style.transition=p.style.transition=anim?"transform .25s ease, opacity .25s":"none";
+    m.style.transform=d?`translateY(${d*0.6}px)`:"";p.style.transform=`translateY(${Math.min(d,MAX)-60}px) rotate(${d*3}deg)`;p.style.opacity=Math.min(1,d/GO);};
+  m.addEventListener("touchstart",e=>{if(busy||m.scrollTop>0||st.sheet){y0=null;return;}y0=e.touches[0].clientY;dy=0;},{passive:true});
+  m.addEventListener("touchmove",e=>{if(y0==null)return;const d=e.touches[0].clientY-y0;if(d<=0||m.scrollTop>0){if(dy)set(0);dy=0;return;}
+    dy=Math.min(MAX*1.4,d*0.55);set(dy);if(e.cancelable)e.preventDefault();},{passive:false});
+  m.addEventListener("touchend",async()=>{if(y0==null)return;y0=null;
+    if(dy<GO){set(0,true);dy=0;return;}
+    busy=true;set(GO,true);p.classList.add("spin");
+    try{if(navigator.serviceWorker){const r=await navigator.serviceWorker.getRegistration();if(r)r.update();}}catch(_){}
+    const ok=await sync();p.classList.remove("spin");set(0,true);dy=0;busy=false;
+    toast(ok?"Aktuell":st.net==="key"?"Schlüssel fehlt":"Offline, später nochmal versuchen");});
+})();
 window.addEventListener("hashchange",()=>{st.sheet=false;render();$("#main").scrollTop=0;});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")sync();});
 setInterval(()=>{if(document.visibilityState==="visible")sync();},300000);
