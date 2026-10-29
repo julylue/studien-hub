@@ -152,7 +152,10 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
 .bars{position:absolute;inset:0;display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:5px;align-items:end}
 .bars button{height:100%;display:flex;align-items:flex-end}.bars span{width:100%;border-radius:6px}
 .lbls{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:5px;margin-top:6px}.lbls span{text-align:center;font-size:10px}
-.dayl .row{border-top:1px solid var(--soft)}.none{margin:0;padding:12px 0 14px;color:var(--muted);font-size:15px}
+.dday{border-top:1px solid var(--soft)}
+.dh{width:100%;display:flex;align-items:center;gap:10px;padding:12px 0;font-size:15px}.dh span{flex:1;text-align:left}.dh b{font-size:15px}.dh b.z{color:var(--faint);font-weight:600}
+.dh svg{width:16px;height:16px;color:var(--muted);transition:transform .2s}.dh i{width:16px}.dday.on .dh svg{transform:rotate(180deg)}.dh:disabled{cursor:default}
+.drow{display:flex;align-items:center;gap:12px;padding:8px 0 8px 12px;border-left:2px solid var(--line);margin:0 0 6px 2px}.none{margin:0;padding:12px 0 14px;color:var(--muted);font-size:15px}
 .ptr{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);width:36px;height:36px;margin-left:-18px;border-radius:50%;
   background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;
   transform:translateY(-60px);opacity:0;z-index:4;pointer-events:none}
@@ -184,7 +187,7 @@ const FIRST="2026-10-12", WEEKS=20;
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const st={rows:[],zp:[],zeit:[],queue:[],key:"",net:"",open:false,wi:null,sheet:false,ask:null,other:false,sel:null};
+const st={rows:[],zp:[],zeit:[],queue:[],key:"",net:"",open:false,wi:null,sheet:false,ask:null,other:false,sel:null,days:{},allDays:false};
 (function(){
   let k="";try{k=new URLSearchParams(location.search).get("k")||"";}catch(e){}
   try{if(k)localStorage.setItem("hub-key",k);else k=localStorage.getItem("hub-key")||"";}catch(e){}
@@ -321,17 +324,24 @@ function vVerlauf(){
   const WD=["So","Mo","Di","Mi","Do","Fr","Sa"];
   const bars=days.map((x,k)=>`<button data-day="${k}" aria-label="${x.d.getDate()}.${x.d.getMonth()+1}., ${fmtH(x.ms)}"><span style="height:${Math.max(4,y(x.ms/36e5))}px;background:var(${k===st.sel?"--ink":x.ms?"--box":"--track"})"></span></button>`).join("");
   const labels=days.map((x,k)=>`<span style="font-weight:${k===st.sel?800:600};color:var(${k===st.sel?"--ink":"--faint"})">${x.today?"heute":WD[x.d.getDay()]}</span>`).join("");
-  const segs=st.zeit.filter(z=>segDay(z)===sel.key);const by={};
-  segs.forEach(z=>{const k=String(z.ref);(by[k]=by[k]||{titel:z.titel,kurs:z.kurs,ms:0}).ms+=segMs(z);});
-  const items=Object.values(by);
-  const title=(sel.today?"Heute, ":WDL[sel.d.getDay()]+", ")+sel.d.getDate()+". "+MON[sel.d.getMonth()];
+  // Alle Tage seit dem ersten Eintrag, neueste zuerst; jeder Tag aufklappbar
+  const first=st.zeit.map(segDay).filter(Boolean).sort()[0]||iso(t);
+  const all=[];for(let d=new Date(t);iso(d)>=first;d=addD(d,-1))all.push(iso(d));
+  const shown=st.allDays?all:all.slice(0,10);
+  const dayRow=key=>{const d=day(key);const ms=dayMs(key);const open=!!st.days[key];
+    const segs=st.zeit.filter(z=>segDay(z)===key);const by={};
+    segs.forEach(z=>{const k=String(z.ref);(by[k]=by[k]||{titel:z.titel,kurs:z.kurs,ms:0}).ms+=segMs(z);});
+    const title=(key===iso(t)?"Heute, ":WDL[d.getDay()]+", ")+d.getDate()+". "+MON[d.getMonth()];
+    const items=open&&ms?Object.values(by).map(x=>`<div class="drow"><span class="tx"><span class="t">${esc(x.titel)}</span><span class="s">${esc(KURS[x.kurs]||x.kurs||"")}</span></span><span class="tag" style="color:var(--ink)">${fmtH(x.ms)}</span></div>`).join(""):"";
+    return `<div class="dday ${open?"on":""}" id="d-${key}"><button class="dh" ${ms?`data-dayt="${key}"`:"disabled"}><span>${esc(title)}</span><b class="${ms?"":"z"}">${ms?fmtH(ms):"–"}</b>${ms?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`:"<i></i>"}</button>${items}</div>`;};
+  const more=all.length>10?`<button class="plain" data-alldays>${st.allDays?"Weniger anzeigen":`Ältere Tage (${all.length-10})`}</button>`:"";
   return `<a class="back" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Als Nächstes</a>
   <h1 class="vh">Verlauf</h1>
   <div class="tiles"><div class="tile"><small>Diese Woche</small><b>${fmtH1(S.wk/36e5)} h</b><div class="bar0"><i style="width:${Math.min(100,S.wk/36e5/GOAL*100)}%"></i></div><p>von ${GOAL} h Ziel</p></div>
   <div class="tile"><small>Ø pro Tag</small><b>${fmtH1(S.avg/36e5)} h</b><p>letzte 7 Tage, freie Tage zählen mit</p></div></div>
   <section class="chart"><div class="ch"><p class="lbl">Letzte 14 Tage</p><span class="leg"><span><i class="da"></i>Ø</span><span><i class="go"></i>Ziel</span></span></div>
   <div class="plot"><div class="ln da" style="bottom:${y(S.avg/36e5)}px"></div><div class="ln go" style="bottom:${y(GOAL/7)}px"></div><div class="bars">${bars}</div></div><div class="lbls">${labels}</div></section>
-  <section class="dayl"><div class="ch"><h2>${esc(title)}</h2><b>${fmtH(sel.ms)}</b></div>${items.length?items.map(x=>`<div class="row"><span class="tx"><span class="t">${esc(x.titel)}</span><span class="s">${esc(KURS[x.kurs]||x.kurs||"")}</span></span><span class="tag" style="color:var(--ink)">${fmtH(x.ms)}</span></div>`).join(""):`<p class="none">Nichts erfasst.</p>`}</section><div style="height:12px;flex:none"></div>`;
+  <section class="dayl"><p class="lbl" style="padding:2px 0 6px">Alle Tage</p>${shown.map(dayRow).join("")}${more}</section><div style="height:12px;flex:none"></div>`;
 }
 
 /* ---------- Abfragen ---------- */
@@ -451,7 +461,9 @@ document.addEventListener("click",e=>{
   if(el=q("[data-end]")){const r=running();if(r){r.ende=+el.dataset.end;pushSeg(r);st.other=false;save();render();sync();}return;}
   if(q("[data-endsave]")){const r=running();const v=($("#othtime").value||"");if(r&&/^\d\d:\d\d$/.test(v)){const s0=new Date(num(r.start));const d=new Date(s0);d.setHours(+v.slice(0,2),+v.slice(3),0,0);if(d<s0)d.setDate(d.getDate()+1);if(d.getTime()>Date.now())return;r.ende=d.getTime();pushSeg(r);st.other=false;save();render();sync();}return;}
   if(q("[data-keep]")){const r=running();try{if(r)sessionStorage.setItem("keep-"+r.id,"1");}catch(_){}st.other=false;render();return;}
-  if(el=q("[data-day]")){st.sel=+el.dataset.day;render();return;}
+  if(el=q("[data-day]")){st.sel=+el.dataset.day;const key=iso(addD(new Date(),-(13-st.sel)));st.days[key]=true;if(!st.allDays&&Math.round((new Date()-day(key))/864e5)>=10)st.allDays=true;render();const n=document.getElementById("d-"+key);if(n)n.scrollIntoView({behavior:"smooth",block:"center"});return;}
+  if(el=q("[data-dayt]")){const k=el.dataset.dayt;st.days[k]=!st.days[k];render();return;}
+  if(q("[data-alldays]")){st.allDays=!st.allDays;render();return;}
   if(e.target.closest("[data-open]")){st.open=!st.open;render();return;}
   const g=e.target.closest("[data-go]");if(g&&!g.disabled){st.wi=+g.dataset.go;if(g.hasAttribute("data-close"))st.sheet=false;render();$("#main").scrollTop=0;return;}
   if(e.target.closest("[data-sheet]")){st.sheet=true;render();return;}
@@ -489,7 +501,7 @@ document.addEventListener("submit",e=>{
     const ok=await sync();p.classList.remove("spin");set(0,true);dy=0;busy=false;
     toast(ok?"Aktuell":st.net==="key"?"Schlüssel fehlt":"Offline, später nochmal versuchen");});
 })();
-window.addEventListener("hashchange",()=>{st.sheet=false;st.sel=null;render();$("#main").scrollTop=0;});
+window.addEventListener("hashchange",()=>{st.sheet=false;st.sel=null;st.days={};st.allDays=false;render();$("#main").scrollTop=0;});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")sync();});
 setInterval(()=>{if(document.visibilityState==="visible")sync();},300000);
 setInterval(()=>{document.querySelectorAll("[data-clock]").forEach(el=>{el.textContent=fmtClock(Date.now()-(+el.dataset.clock));});},1000);
