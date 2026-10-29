@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Studium">
-<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#131415" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#e9efec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1513" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Studium</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -198,6 +198,43 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
   .grp .xr{display:none}.grp.ex .xr{display:flex}
   .more2{display:block;width:100%;padding:9px 0 11px;border-top:1px solid var(--soft);font-size:13px;font-weight:700;color:var(--muted);text-align:left}
 }
+/* ===== Stil der Karten-App (übernommen 29.10.) ===== */
+:root,:root:not([data-theme="dark"]){
+  --bg:#e9efec; --bg2:#dfe8e4; --card:#ffffff; --ink:#15201c; --muted:#5d6b66; --faint:#7f8e88; --line:#d3ddd8; --soft:#e4efeb; --track:#e4efeb;
+  --box:#9fb0a9; --late:#b5400b; --lateb:#c4561c; --late-soft:#fbe9dd; --ok:#2b6a5b; --dis:#c3cfca; --accent:#2b6a5b; --hl:#d8ece5;
+  --btn:#2b6a5b; --btn-ink:#ffffff; --scrim:rgba(15,25,21,.38);
+  --shadow:0 1px 2px rgba(20,40,34,.06),0 12px 32px rgba(20,40,34,.12);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1513; --bg2:#131b18; --card:#1b2421; --ink:#e6eeeb; --muted:#97a6a0; --faint:#7d8c86; --line:#2b3632; --soft:#1f2d29; --track:#1f2d29;
+  --box:#5d6d67; --late:#f0915f; --lateb:#e0814f; --late-soft:#3a2418; --ok:#76b7a5; --dis:#3a4642; --accent:#76b7a5; --hl:#24423a;
+  --btn:#76b7a5; --btn-ink:#0f1513; --scrim:rgba(0,0,0,.55); --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45)}}
+html,body{background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%) fixed}
+.main,.cols,.colL,.colR,.shell{background:transparent}
+nav{background:transparent;border-top:0}
+.seg{background:var(--soft)} .seg a[aria-current="page"]{box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.now,.list,.grp,.tile,.chart,.dayl,.keyf{border:0;box-shadow:var(--shadow);border-radius:24px}
+.now{padding:26px 24px}
+.lbl,.date{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.date{letter-spacing:.06em}
+h1.head{font-size:30px;margin-top:14px}
+.stat{background:var(--card);box-shadow:var(--shadow);border-radius:20px;padding:16px 18px}
+.stat b{font-size:22px;color:var(--accent)}
+.now .t{font-size:26px}
+.done{border-radius:16px;padding:17px;font-size:17px}
+.done.sec,.pill,.chip,.pillc{background:var(--soft);color:var(--ink)}
+.chip{border-radius:999px;padding:4px 11px}
+.chip.late,.od{background:var(--late-soft);color:var(--late)}
+.ck span{border-radius:8px}
+.ck.on span{background:var(--accent)}
+.tag.late,.state span.late,.grp h2 span.late{color:var(--late)}
+.bar,.bar0{height:6px;border-radius:3px;background:var(--line)} .bar i,.bar0 i{height:6px;border-radius:3px;background:var(--accent)}
+.tile b{color:var(--accent);font-size:30px}
+.clock{color:var(--accent);font-size:72px;letter-spacing:-.03em}
+.ln.da{border-top-color:var(--ink)} .ln.go{border-top-color:var(--accent)}
+.mini{background:var(--card);color:var(--ink);box-shadow:var(--shadow)} .mini button{background:var(--soft)}
+.sheet .p{border-radius:24px 24px 0 0}
+@media (min-width:1000px){.colL,.colR{padding:4px 28px 40px;margin:-4px -28px 0}.colL{max-width:476px;flex-basis:416px}.cols{gap:0}.colR{margin-left:28px}}
 </style>
 </head>
 <body>
@@ -219,7 +256,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="13";
+const APP_V="14";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
