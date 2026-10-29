@@ -18,20 +18,20 @@
 /* Zwei Ansichten: "Als Nächstes" (was jetzt zu tun ist) und "Zeitplan" (was laut Uni wann dran ist).
    Rückstand zählt nur Minimum-Aufgaben, deren offizieller Bearbeitungszeitraum vorbei ist. */
 :root{
-  --bg:#f6f5f2; --card:#ffffff; --ink:#1c1d1f; --muted:#6b6f75; --faint:#8a8e94; --line:#e4e2dd; --soft:#f0eee9; --track:#ebe8e2;
-  --box:#b9bcc1; --late:#b5400b; --lateb:#c4561c; --late-soft:#fbe9dd; --ok:#1f7a55; --dis:#c9c6c0;
-  --btn:#1c1d1f; --btn-ink:#ffffff; --scrim:rgba(28,29,31,.35);
+  --bg:#f6f5f2; --card:#ffffff; --ink:#1c1d1f; --muted:#5f6369; --faint:#6e7278; --line:#e4e2dd; --soft:#f0eee9; --track:#ebe8e2;
+  --box:#868a90; --late:#b5400b; --lateb:#c4561c; --late-soft:#fbe9dd; --ok:#1f7a55; --dis:#c9c6c0;
+  --btn:#1c1d1f; --btn-ink:#ffffff; --scrim:rgba(28,29,31,.35); --dot-live:#5cc49a;
   --shadow:0 1px 2px rgba(28,29,31,.08),0 2px 6px rgba(28,29,31,.06);
   --font:"Atkinson Hyperlegible Next","Atkinson Hyperlegible",-apple-system,system-ui,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#131415; --card:#1d1f21; --ink:#eceeef; --muted:#9ca1a6; --faint:#80868b; --line:#2c3033; --soft:#26292b; --track:#26292b;
-  --box:#5d6368; --late:#f0915f; --lateb:#e0814f; --late-soft:#3a2418; --ok:#5cc49a; --dis:#454a4e;
-  --btn:#eceeef; --btn-ink:#131415; --scrim:rgba(0,0,0,.55); --shadow:none; color-scheme:dark}}
+  --bg:#131415; --card:#1d1f21; --ink:#eceeef; --muted:#9ca1a6; --faint:#878d92; --line:#2c3033; --soft:#26292b; --track:#26292b;
+  --box:#767c81; --late:#f0915f; --lateb:#e0814f; --late-soft:#3a2418; --ok:#5cc49a; --dis:#454a4e;
+  --btn:#eceeef; --btn-ink:#131415; --scrim:rgba(0,0,0,.55); --shadow:none; --dot-live:#1f7a55; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#131415; --card:#1d1f21; --ink:#eceeef; --muted:#9ca1a6; --faint:#80868b; --line:#2c3033; --soft:#26292b; --track:#26292b;
-  --box:#5d6368; --late:#f0915f; --lateb:#e0814f; --late-soft:#3a2418; --ok:#5cc49a; --dis:#454a4e;
-  --btn:#eceeef; --btn-ink:#131415; --scrim:rgba(0,0,0,.55); --shadow:none; color-scheme:dark}
+  --bg:#131415; --card:#1d1f21; --ink:#eceeef; --muted:#9ca1a6; --faint:#878d92; --line:#2c3033; --soft:#26292b; --track:#26292b;
+  --box:#767c81; --late:#f0915f; --lateb:#e0814f; --late-soft:#3a2418; --ok:#5cc49a; --dis:#454a4e;
+  --btn:#eceeef; --btn-ink:#131415; --scrim:rgba(0,0,0,.55); --shadow:none; --dot-live:#1f7a55; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow:hidden}
@@ -123,7 +123,7 @@ h1.head{margin:24px 0 0;font-size:36px;line-height:1.12;font-weight:800;letter-s
 .stat svg{width:18px;height:18px;color:var(--muted);flex:none}
 .now .lbl{display:flex;justify-content:space-between;align-items:center}
 .pillc{font-size:12px;font-weight:700;letter-spacing:0;text-transform:none;padding:4px 10px;border-radius:999px;background:var(--track);color:var(--muted)}
-.pillc.live{background:#1f7a55;color:#fff}
+.pillc.live{background:var(--ok);color:var(--card)}
 .clock{margin:16px 0 0;font-size:56px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}.row2 .done{margin-top:0}
 .done{display:flex;align-items:center;justify-content:center;gap:8px}.done svg{width:18px;height:18px}
@@ -131,7 +131,7 @@ h1.head{margin:24px 0 0;font-size:36px;line-height:1.12;font-weight:800;letter-s
 .plain{display:block;width:100%;margin-top:12px;padding:6px;text-align:center;font-size:14px;font-weight:700;color:var(--muted)}
 #mini{flex:none}
 .mini{display:flex;align-items:center;gap:12px;margin:0 16px 10px;padding:10px 12px 10px 14px;border-radius:16px;background:var(--btn);color:var(--btn-ink)}
-.mini .dt{width:8px;height:8px;border-radius:50%;background:#5cc49a;flex:none}.mini .x{flex:1;min-width:0}.mini .x b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mini .x small{font-size:12px;opacity:.7}
+.mini .dt{width:8px;height:8px;border-radius:50%;background:var(--dot-live);flex:none}.mini .x{flex:1;min-width:0}.mini .x b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mini .x small{font-size:12px;opacity:.7}
 .mini .c{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}.mini button{padding:7px 12px;border-radius:10px;background:rgba(127,127,127,.3);font-size:13px;font-weight:700;color:inherit}
 .p.ask{padding:10px 24px calc(env(safe-area-inset-bottom,0px) + 24px)}
 .at{margin:4px 0 0;font-size:22px;font-weight:800;line-height:1.2}.aq{margin:6px 0 0;font-size:16px}
@@ -164,6 +164,30 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);transform:translate(-50%,16px);opacity:0;background:var(--btn);color:var(--btn-ink);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;transition:all .2s;pointer-events:none;z-index:9}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+/* Datenstand neben dem Datum */
+.dl{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.stand{flex:none;display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--muted)}
+.stand svg{width:14px;height:14px}
+.stand.off{color:var(--late);background:var(--late-soft);padding:4px 10px;border-radius:999px}
+/* Rückstand antippbar */
+.sl{font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.odl .row{padding:11px 0}.odl .row+.row{border-top:1px solid var(--soft)}
+/* Am Schreibtisch: Als Nächstes und Zeitplan nebeneinander */
+@media (min-width:1000px){
+  .shell{max-width:1184px}
+  nav{display:none}
+  .main.wide{padding:48px 32px}
+  .cols{display:flex;gap:56px;align-items:flex-start}
+  .colL{flex:1 1 360px;max-width:420px;display:flex;flex-direction:column}
+  .colR{flex:999 1 560px;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .colR>*{grid-column:1/-1}
+  .colR .zhead{grid-column:1;grid-row:1;margin:0}
+  .colR .wsw{grid-column:2;grid-row:1;margin:0;grid-template-columns:44px auto 44px}
+  .colR .wpick{padding:4px 8px}
+  .colR .od{justify-self:start;margin:14px 0 0}
+  .colR .state,.colR .bar,.colR .free{margin-left:0;margin-right:0}
+  .colR .groups{margin:20px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+}
 </style>
 </head>
 <body>
@@ -176,7 +200,7 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
   <div id="ov"></div>
   <div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg></div>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 /* Datenquelle: Google-Tabelle "Studien-Hub Wochenplan" über das Skript "Studien-Hub Schnittstelle".
    Blätter: wochenplan (Arbeitsschritte), zeitplan (Uni-Bausteine mit offiziellem Zeitraum).
@@ -185,19 +209,19 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="8";
+const APP_V="9";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const st={rows:[],zp:[],zeit:[],queue:[],key:"",net:"",open:false,wi:null,sheet:false,ask:null,other:false,sel:null,days:{},allDays:false};
+const st={rows:[],zp:[],zeit:[],queue:[],key:"",net:"",open:false,wi:null,sheet:false,odOpen:false,ask:null,other:false,sel:null,days:{},allDays:false,syncedAt:0};
 (function(){
   let k="";try{k=new URLSearchParams(location.search).get("k")||"";}catch(e){}
   try{if(k)localStorage.setItem("hub-key",k);else k=localStorage.getItem("hub-key")||"";}catch(e){}
   st.key=k;
-  try{const c=JSON.parse(localStorage.getItem("hub3-cache")||"null");if(c){st.rows=c.rows||[];st.zp=c.zp||[];st.zeit=c.zeit||[];st.queue=c.queue||[];}}catch(e){}
+  try{const c=JSON.parse(localStorage.getItem("hub3-cache")||"null");if(c){st.rows=c.rows||[];st.zp=c.zp||[];st.zeit=c.zeit||[];st.queue=c.queue||[];st.syncedAt=c.syncedAt||0;}}catch(e){}
 })();
-function save(){try{localStorage.setItem("hub3-cache",JSON.stringify({rows:st.rows,zp:st.zp,zeit:st.zeit,queue:st.queue}));}catch(e){}}
+function save(){try{localStorage.setItem("hub3-cache",JSON.stringify({rows:st.rows,zp:st.zp,zeit:st.zeit,queue:st.queue,syncedAt:st.syncedAt}));}catch(e){}}
 let chain=Promise.resolve();
 function sync(){
   chain=chain.then(async()=>{
@@ -207,8 +231,8 @@ function sync(){
       const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({k:st.key,ops,data:false})});
       const j=await r.json();if(!j.ok)throw new Error(j.error||"api");
       st.queue=st.queue.slice(ops.length);
-      st.rows=j.plan||[];if(j.zeitplan)st.zp=j.zeitplan;if(j.zeit)st.zeit=j.zeit;st.net="ok";save();render();return true;
-    }catch(e){st.net=e&&e.message==="key"?"key":"off";if(st.net==="key")render();return false;}
+      st.rows=j.plan||[];if(j.zeitplan)st.zp=j.zeitplan;if(j.zeit)st.zeit=j.zeit;st.net="ok";st.syncedAt=Date.now();save();render();return true;
+    }catch(e){const was=st.net;st.net=e&&e.message==="key"?"key":"off";if(st.net!==was)render();return false;}
   });
   return chain;
 }
@@ -284,26 +308,44 @@ function tagOf(r){
   if(z&&z.frist)return {t:"bis "+dm(z.frist),c:""};
   return {t:"diese Woche",c:""};
 }
+const REFRESH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>';
+const NONET='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M5 12.9a10 10 0 0 1 5.2-2.8"/><path d="M19 12.9a10 10 0 0 0-2.3-1.6"/><path d="M12 20h.01"/></svg>';
+function vStand(){ // wann die Daten zuletzt aus der Tabelle kamen
+  if(!st.syncedAt)return st.net==="off"?`<span class="stand off">${NONET}Offline</span>`:"";
+  const t=st.syncedAt;const when=(iso(new Date(t))===TODAY()?"":dm(iso(new Date(t)))+" ")+hm(t);
+  return st.net==="off"?`<span class="stand off">${NONET}Offline · Stand ${when}</span>`:`<span class="stand">${REFRESH}Stand ${when}</span>`;
+}
+function vOd(){ // Liste der überfälligen Aufgaben, über "x Aufgaben aus früheren Wochen" erreichbar
+  if(!st.odOpen)return "";
+  const od=overdue().slice().sort((a,b)=>d10(a.ende).localeCompare(d10(b.ende)));
+  const wk=z=>{const a=day(z.woche),f=day(FIRST);return a&&f?"Woche "+(Math.round((a-f)/(7*864e5))+1):"";};
+  const rows=od.map(z=>{const sub=[KURS[z.kurs]||z.kurs||"",wk(z),isTermin(z)?"":`${dm(z.start)}–${dm(z.ende)}`].filter(Boolean).join(" · ");
+    return `<div class="row"><button class="ck ${isUnk(z)?"unk":"late"}" data-tog="zp:${esc(z.id)}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(z.titel)}</span><span class="s">${esc(sub)}</span></span><span class="tag late">seit ${esc(dm(z.ende))}</span></div>`;}).join("");
+  return `<div class="sheet"><button data-odclose aria-label="Schließen"></button><div class="p" role="dialog" aria-label="Aus früheren Wochen offen"><div class="grab"></div>
+  <div class="h"><h2>Aus früheren Wochen offen</h2><button data-odclose>Fertig</button></div><div class="l odl">${rows||`<p class="none">Alles erledigt.</p>`}</div></div></div>`;
+}
 const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function vNext(){
   const now=new Date();
   const date=`${WDL[now.getDay()]}, ${now.getDate()}. ${MONL[now.getMonth()]}`;
   if(!st.key||st.net==="key")return `<p class="date">${date}</p><form class="keyf" id="keyf"><p class="lbl">Zugang</p><p>Einmal den Schlüssel aus deinem persönlichen Link einfügen (alles nach „k=“).</p><input id="keyin" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel"><button class="done">Verbinden</button></form>`;
-  if(!st.rows.length&&!st.zp.length)return `<p class="date">${date}</p><div class="empty"><b>Lädt …</b>Der Stand kommt aus deiner Tabelle.</div>`;
+  if(!st.rows.length&&!st.zp.length)return st.net==="off"
+    ?`<p class="date">${date}</p><div class="empty" role="status"><b>Keine Verbindung</b>Dein Stand kommt aus deiner Tabelle. Sobald du online bist, lädt er von selbst.</div><button class="done sec" data-retry>${REFRESH}Erneut versuchen</button>`
+    :`<p class="date">${date}</p><div class="empty"><b>Lädt …</b>Der Stand kommt aus deiner Tabelle.</div>`;
   const od=overdue();const n=od.length;
   const by={};od.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+1);
   const mx=Math.max(0,...Object.values(by));const top=Object.keys(by).filter(k=>by[k]===mx).map(k=>KURS[k]||k);
   const most=n>1&&top.length<=2?` Am meisten bei ${top.join(" und ")}.`:"";
   const head=n?"Du hängst hinterher.":"Du bist im Plan.";
-  const sum=n?`${n} ${n===1?"Aufgabe":"Aufgaben"} aus früheren Wochen ${n===1?"ist":"sind"} noch offen.${most}`:"Alles aus früheren Wochen ist erledigt.";
+  const sum=n?`<button class="sl" data-od aria-haspopup="dialog">${n} ${n===1?"Aufgabe":"Aufgaben"} aus früheren Wochen</button> ${n===1?"ist":"sind"} noch offen.${esc(most)}`:"Alles aus früheren Wochen ist erledigt.";
   const q=queueList();const cur=q[0];const rest=q.slice(1);
   const card=cur?vCard(cur):`<div class="empty"><b>Nichts mehr offen</b>Für diese Woche ist alles erledigt.</div>`;
   const S=stats();
   const statRow=`<a class="stat" href="#verlauf"><span class="g"><span><small>Diese Woche</small><b>${fmtH1(S.wk/36e5)} h</b> <i>von ${GOAL} h</i></span><span><small>Ø pro Tag</small><b>${fmtH1(S.avg/36e5)} h</b> <i>Ziel ${fmtH1(GOAL/7)} h</i></span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></a>`;
   const toggle=rest.length?`<button class="toggle" data-open aria-expanded="${st.open}">${st.open?"Weniger anzeigen":`Ganze Liste (${rest.length})`}</button>`:"";
   const list=st.open&&rest.length?`<div class="list">${rest.map(r=>{const t=tagOf(r);
-    return `<div class="row"><button class="ck ${t.box||""}" data-tog="${esc(r.id)}" aria-label="Abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(r.schritt)}</span><span class="s">${esc(whereOf(r))}</span></span><span class="tag ${t.c}">${esc(t.t)}</span></div>`;}).join("")}</div>`:"";
-  return `<p class="date">${date}</p><h1 class="head" style="color:var(${n?"--late":"--ok"})">${head}</h1><p class="sum">${esc(sum)}</p>${statRow}${card}${toggle}${list}`;
+    return `<div class="row"><button class="ck ${t.box||""}" data-tog="${esc(r.id)}" aria-label="${esc(r.schritt)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(r.schritt)}</span><span class="s">${esc(whereOf(r))}</span></span><span class="tag ${t.c}">${esc(t.t)}</span></div>`;}).join("")}</div>`:"";
+  return `<div class="dl"><p class="date">${date}</p>${vStand()}</div><h1 class="head" style="color:var(${n?"--late":"--ok"})">${head}</h1><p class="sum">${sum}</p>${statRow}${card}${toggle}${list}`;
 }
 
 const PLAY='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
@@ -415,7 +457,7 @@ function zRow(z,w){
   else if(!d&&d10(z.ende)>iso(w.e))chip=`<span class="chip">bis ${esc(dm(z.ende))}</span>`;
   else if(late)chip=`<span class="chip late">seit ${esc(dm(z.ende))}</span>`;
   const sub=z.hinweis&&min&&!/^Zusatz/.test(z.hinweis)?`<span class="s">${esc(z.hinweis)}</span>`:"";
-  return `<div class="row ${d?"d":""} ${min?"":"z"}"><button class="ck ${box}" data-zp="${esc(z.id)}" aria-pressed="${d}" aria-label="Abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(z.titel)}</span>${sub}</span>${chip}</div>`;
+  return `<div class="row ${d?"d":""} ${min?"":"z"}"><button class="ck ${box}" data-zp="${esc(z.id)}" aria-pressed="${d}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(z.titel)}</span>${sub}</span>${chip}</div>`;
 }
 function vSheet(){
   if(!st.sheet)return "";
@@ -428,13 +470,16 @@ function vSheet(){
 
 /* ---------- Rahmen ---------- */
 const view=()=>location.hash==="#zeitplan"?"zeit":location.hash==="#verlauf"?"verlauf":"next";
+const WIDE=window.matchMedia("(min-width:1000px)");
+const wide=()=>WIDE.matches;
 function render(){
-  const v=view();const m=$("#main");const top=m.scrollTop;
-  m.className="main"+(v==="zeit"?" zp":"");
-  m.innerHTML=v==="zeit"?vZeit():v==="verlauf"?vVerlauf():vNext();
+  const v=view();const m=$("#main");const top=m.scrollTop;const w=wide();
+  m.className="main"+(w?" wide":v==="zeit"?" zp":"");
+  m.innerHTML=w?`<div class="cols"><div class="colL">${v==="verlauf"?vVerlauf():vNext()}</div><div class="colR">${vZeit()}</div></div>`
+    :v==="zeit"?vZeit():v==="verlauf"?vVerlauf():vNext();
   $("#n1").toggleAttribute("aria-current",v!=="zeit");$("#n2").toggleAttribute("aria-current",v==="zeit");
   if(v==="zeit")$("#n2").setAttribute("aria-current","page");else $("#n1").setAttribute("aria-current","page");
-  $("#ov").innerHTML=(v==="zeit"?vSheet():"")+vAsk();$("#mini").innerHTML=vMini();
+  $("#ov").innerHTML=(v==="zeit"||w?vSheet():"")+(v!=="zeit"||w?vOd():"")+vAsk();$("#mini").innerHTML=w&&v!=="verlauf"?"":vMini();
   m.scrollTop=top;
 }
 let toastT;function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove("show"),1800);}
@@ -468,6 +513,9 @@ document.addEventListener("click",e=>{
   if(el=q("[data-dayt]")){const k=el.dataset.dayt;st.days[k]=!st.days[k];render();return;}
   if(q("[data-alldays]")){st.allDays=!st.allDays;render();return;}
   if(e.target.closest("[data-open]")){st.open=!st.open;render();return;}
+  if(q("[data-od]")){st.odOpen=true;render();return;}
+  if(q("[data-odclose]")){st.odOpen=false;render();return;}
+  if(q("[data-retry]")){st.net="";render();sync().then(ok=>{if(!ok&&st.net!=="key")toast("Noch keine Verbindung");});return;}
   const g=e.target.closest("[data-go]");if(g&&!g.disabled){st.wi=+g.dataset.go;if(g.hasAttribute("data-close"))st.sheet=false;render();$("#main").scrollTop=0;return;}
   if(e.target.closest("[data-sheet]")){st.sheet=true;render();return;}
   if(e.target.closest("[data-close]")){st.sheet=false;render();return;}
@@ -494,7 +542,8 @@ document.addEventListener("submit",e=>{
   const m=$("#main"),p=$("#ptr"),MAX=90,GO=64;let y0=null,dy=0,busy=false;
   const set=(d,anim)=>{m.style.transition=p.style.transition=anim?"transform .25s ease, opacity .25s":"none";
     m.style.transform=d?`translateY(${d*0.6}px)`:"";p.style.transform=`translateY(${Math.min(d,MAX)-60}px) rotate(${d*3}deg)`;p.style.opacity=Math.min(1,d/GO);};
-  m.addEventListener("touchstart",e=>{if(busy||m.scrollTop>0||st.sheet){y0=null;return;}y0=e.touches[0].clientY;dy=0;},{passive:true});
+  m.addEventListener("touchcancel",()=>{if(y0==null||busy)return;y0=null;dy=0;set(0,true);});
+  m.addEventListener("touchstart",e=>{if(busy||m.scrollTop>0||st.sheet||st.odOpen){y0=null;return;}y0=e.touches[0].clientY;dy=0;},{passive:true});
   m.addEventListener("touchmove",e=>{if(y0==null)return;const d=e.touches[0].clientY-y0;if(d<=0||m.scrollTop>0){if(dy)set(0);dy=0;return;}
     dy=Math.min(MAX*1.4,d*0.55);set(dy);if(e.cancelable)e.preventDefault();},{passive:false});
   m.addEventListener("touchend",async()=>{if(y0==null)return;y0=null;
@@ -505,7 +554,16 @@ document.addEventListener("submit",e=>{
     const ok=await sync();p.classList.remove("spin");set(0,true);dy=0;busy=false;
     toast(ok?"Aktuell":st.net==="key"?"Schlüssel fehlt":"Offline, später nochmal versuchen");});
 })();
-window.addEventListener("hashchange",()=>{st.sheet=false;st.sel=null;st.days={};st.allDays=false;render();$("#main").scrollTop=0;});
+/* Escape schließt das offene Fenster unten */
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape")return;
+  if(st.ask){st.ask=null;st.other=false;render();toast("Erledigt");return;}
+  if(st.odOpen||st.sheet){st.odOpen=false;st.sheet=false;render();}
+});
+WIDE.addEventListener("change",()=>render());
+window.addEventListener("online",()=>sync());
+window.addEventListener("offline",()=>{if(st.net!=="key"){st.net="off";render();}});
+window.addEventListener("hashchange",()=>{st.sheet=false;st.odOpen=false;st.sel=null;st.days={};st.allDays=false;render();$("#main").scrollTop=0;});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){checkVersion();sync();}});
 setInterval(()=>{if(document.visibilityState==="visible")sync();},300000);
 setInterval(()=>{document.querySelectorAll("[data-clock]").forEach(el=>{el.textContent=fmtClock(Date.now()-(+el.dataset.clock));});},1000);
