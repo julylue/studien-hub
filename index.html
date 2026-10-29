@@ -219,7 +219,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="12";
+const APP_V="13";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -449,9 +449,9 @@ function vZeit(){
     const rank=z=>isTermin(z)?1:!isMin(z)?3:zpDone(z)?2:0;
     const sorted=its.map((z,k)=>({z,k})).sort((a,b)=>rank(a.z)-rank(b.z)||a.k-b.k).map(x=>x.z);
     const CAP=3;let shown=0;const ex=!!(st.exp&&st.exp[g]);
-    const rows=sorted.map(z=>{const vis=shown<CAP&&isMin(z)||(isTermin(z)&&shown<CAP);if(vis)shown++;return zRow(z,w).replace('<div class="row','<div class="'+(vis?"":"xr ")+'row');}).join("");
+    const rows=sorted.map(z=>{const vis=shown<CAP;if(vis)shown++;return zRow(z,w).replace('<div class="row','<div class="'+(vis?"":"xr ")+'row');}).join("");
     const hid=sorted.length-shown;
-    const more=hid?`<button class="more2" data-grp="${esc(g)}">${ex?"Weniger":"+"+hid+(sorted.filter(z=>isMin(z)||isTermin(z)).length===shown?" Zusatz":" weitere")}</button>`:"";
+    const more=hid?`<button class="more2" data-grp="${esc(g)}">${ex?"Weniger":"+"+hid+" weitere"}</button>`:"";
     return `<section class="grp${ex?" ex":""}"><h2>${esc(g)}${tk.length?`<span class="${lateG?"late":""}">${dn} von ${tk.length}</span>`:""}</h2>${rows}${more}</section>`;}).join("");
   const free=!w.items.length?`<p class="free">${esc(PAUSE[w.key]||"Keine Aufgaben laut Zeitplan.")}</p>`:"";
   return `<div class="zhead"><h1>Zeitplan</h1>${i!==nowI?`<button class="pill" data-go="${nowI}">Diese Woche</button>`:""}</div>
