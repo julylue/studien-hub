@@ -105,7 +105,6 @@ h1.head{margin:24px 0 0;font-size:36px;line-height:1.12;font-weight:800;letter-s
 .sheet{position:absolute;inset:0;background:var(--scrim);display:flex;flex-direction:column;justify-content:flex-end;z-index:5}
 .sheet>button{flex:1}
 .sheet .p{background:var(--card);border-radius:24px 24px 0 0;padding:10px 0 calc(env(safe-area-inset-bottom,0px) + 24px);max-height:78%;display:flex;flex-direction:column}
-.grab{width:36px;height:5px;border-radius:3px;background:var(--line);align-self:center}
 .sheet .h{display:flex;justify-content:space-between;align-items:center;padding:12px 24px 8px}
 .sheet .h h2{margin:0;font-size:18px;font-weight:800}
 .sheet .h button{font-size:15px;font-weight:700;color:var(--muted);padding:8px 0}
@@ -209,7 +208,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="9";
+const APP_V="10";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -321,7 +320,7 @@ function vOd(){ // Liste der überfälligen Aufgaben, über "x Aufgaben aus frü
   const wk=z=>{const a=day(z.woche),f=day(FIRST);return a&&f?"Woche "+(Math.round((a-f)/(7*864e5))+1):"";};
   const rows=od.map(z=>{const sub=[KURS[z.kurs]||z.kurs||"",wk(z),isTermin(z)?"":`${dm(z.start)}–${dm(z.ende)}`].filter(Boolean).join(" · ");
     return `<div class="row"><button class="ck ${isUnk(z)?"unk":"late"}" data-tog="zp:${esc(z.id)}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(z.titel)}</span><span class="s">${esc(sub)}</span></span><span class="tag late">seit ${esc(dm(z.ende))}</span></div>`;}).join("");
-  return `<div class="sheet"><button data-odclose aria-label="Schließen"></button><div class="p" role="dialog" aria-label="Aus früheren Wochen offen"><div class="grab"></div>
+  return `<div class="sheet"><button data-odclose aria-label="Schließen"></button><div class="p" role="dialog" aria-label="Aus früheren Wochen offen">
   <div class="h"><h2>Aus früheren Wochen offen</h2><button data-odclose>Fertig</button></div><div class="l odl">${rows||`<p class="none">Alles erledigt.</p>`}</div></div></div>`;
 }
 const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -393,14 +392,14 @@ function vVerlauf(){
 function vAsk(){
   const run=running();
   if(st.ask){const a=st.ask;
-    return `<div class="sheet"><button data-skip aria-label="Schließen"></button><div class="p ask"><div class="grab"></div><p class="lbl" style="margin-top:18px">Erledigt</p><p class="at">${esc(a.titel)}</p><p class="aq">Wie lange hast du daran gesessen?</p>
+    return `<div class="sheet"><button data-skip aria-label="Schließen"></button><div class="p ask"><p class="lbl" style="margin-top:18px">Erledigt</p><p class="at">${esc(a.titel)}</p><p class="aq">Wie lange hast du daran gesessen?</p>
     ${st.other?`<div class="oth"><input id="othmin" type="number" inputmode="numeric" min="1" placeholder="Minuten"><button class="done" data-othsave>Speichern</button></div>`:
     `<div class="chips4">${[15,30,45,60,90,120,150,180].map(m=>`<button data-min="${m}">${m<60?m+" Min":String(m/60).replace(".",",")+" h"}</button>`).join("")}</div><button class="done sec" data-other style="margin-top:12px">Andere Dauer</button>`}
     <button class="plain" data-skip>Überspringen</button></div></div>`;}
   if(run&&Date.now()-num(run.start)>3*36e5&&!dismissed(run.id)){
     const s0=num(run.start);let t=new Date(s0);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?30:60);const opts=[];
     while(t.getTime()<Date.now()&&opts.length<5){opts.push(t.getTime());t=new Date(t.getTime()+30*60000);}
-    return `<div class="sheet"><span style="flex:1"></span><div class="p ask"><div class="grab"></div><p class="lbl" style="margin-top:18px">Uhr läuft seit ${Math.floor((Date.now()-s0)/36e5)} Stunden</p><p class="at">Wann hast du aufgehört?</p><p class="aq">${esc(run.titel)}, gestartet um ${hm(s0)}</p>
+    return `<div class="sheet"><span style="flex:1"></span><div class="p ask"><p class="lbl" style="margin-top:18px">Uhr läuft seit ${Math.floor((Date.now()-s0)/36e5)} Stunden</p><p class="at">Wann hast du aufgehört?</p><p class="aq">${esc(run.titel)}, gestartet um ${hm(s0)}</p>
     ${st.other?`<div class="oth"><input id="othtime" type="time"><button class="done" data-endsave>Speichern</button></div>`:`<div class="chips3">${opts.map(o=>`<button data-end="${o}">${hm(o)}</button>`).join("")}<button data-other>Andere Zeit</button></div>`}
     <button class="done sec" data-keep style="margin-top:12px">Läuft wirklich noch</button></div></div>`;}
   return "";
@@ -462,7 +461,7 @@ function zRow(z,w){
 function vSheet(){
   if(!st.sheet)return "";
   const W=weeks();
-  return `<div class="sheet"><button data-close aria-label="Schließen"></button><div class="p" role="dialog" aria-label="Woche wählen"><div class="grab"></div>
+  return `<div class="sheet"><button data-close aria-label="Schließen"></button><div class="p" role="dialog" aria-label="Woche wählen">
   <div class="h"><h2>Woche wählen</h2><button data-close>Fertig</button></div><div class="l">${W.map(w=>{
     const s=!w.items.length?"frei":w.past?(w.open?w.open+" offen":"erledigt"):w.now?`${w.done} von ${w.tasks.length}`:`${w.tasks.length} Aufgaben`;
     return `<button class="wr" data-go="${w.k}" data-close><span class="a"><b class="${w.k===st.wi?"on":""}">${w.label}${w.now?" · jetzt":""}</b><small>${w.range}</small></span><span class="${w.past&&w.open?"late":""}">${s}</span></button>`;}).join("")}</div></div></div>`;
