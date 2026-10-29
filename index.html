@@ -184,6 +184,9 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
 const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5lUO3fpVItky-bHpHem6PknQ8ef4VaiV6KrKQ87t/exec";
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
+/* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
+const APP_V="8";
+async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -498,14 +501,15 @@ document.addEventListener("submit",e=>{
     if(dy<GO){set(0,true);dy=0;return;}
     busy=true;set(GO,true);p.classList.add("spin");
     try{if(navigator.serviceWorker){const r=await navigator.serviceWorker.getRegistration();if(r)r.update();}}catch(_){}
+    if(await checkVersion())return;
     const ok=await sync();p.classList.remove("spin");set(0,true);dy=0;busy=false;
     toast(ok?"Aktuell":st.net==="key"?"Schlüssel fehlt":"Offline, später nochmal versuchen");});
 })();
 window.addEventListener("hashchange",()=>{st.sheet=false;st.sel=null;st.days={};st.allDays=false;render();$("#main").scrollTop=0;});
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")sync();});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){checkVersion();sync();}});
 setInterval(()=>{if(document.visibilityState==="visible")sync();},300000);
 setInterval(()=>{document.querySelectorAll("[data-clock]").forEach(el=>{el.textContent=fmtClock(Date.now()-(+el.dataset.clock));});},1000);
-render();sync();
+render();sync();checkVersion();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}
 </script>
 </body>
