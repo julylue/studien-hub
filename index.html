@@ -91,6 +91,7 @@ h1.head{margin:24px 0 0;font-size:36px;line-height:1.12;font-weight:800;letter-s
 .state em{font-style:normal;font-size:15px;color:var(--muted);white-space:nowrap} .state em b{font-size:22px;color:var(--ink)}
 .bar{margin:10px 24px 0;height:4px;border-radius:2px;background:var(--line)} .bar i{display:block;height:4px;border-radius:2px;background:var(--ink)}
 .groups{margin:20px 16px 0;display:flex;flex-direction:column;gap:12px}
+.more2{display:none}
 .grp{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px 4px}
 .grp h2{margin:0 0 4px;font-size:16px;font-weight:800;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .grp h2 span{font-size:13px;font-weight:600;color:var(--faint)} .grp h2 span.late{color:var(--late)}
@@ -188,6 +189,14 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
   /* Zwei Spalten ohne Lücken: Karten fließen wie bei einer Pinnwand untereinander */
   .colR .groups{margin:20px 0 0;display:block;columns:2;column-gap:12px}
   .colR .groups .grp{break-inside:avoid;margin:0 0 12px;display:block}
+  /* Alles bleibt im Bild: Seite scrollt nicht, nur notfalls die Spalten selbst */
+  body{height:100vh}
+  .main.wide{height:100vh;overflow:hidden;padding-top:36px;padding-bottom:24px}
+  .cols{height:100%}
+  .colL,.colR{max-height:100%;overflow-y:auto;scrollbar-width:none}
+  .colL::-webkit-scrollbar,.colR::-webkit-scrollbar{display:none}
+  .grp .xr{display:none}.grp.ex .xr{display:flex}
+  .more2{display:block;width:100%;padding:9px 0 11px;border-top:1px solid var(--soft);font-size:13px;font-weight:700;color:var(--muted);text-align:left}
 }
 </style>
 </head>
@@ -210,7 +219,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="11";
+const APP_V="12";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -436,7 +445,14 @@ function vZeit(){
   const gl=Object.keys(groups).sort((a,b)=>{const ka=order.indexOf(groups[a][0].kurs),kb=order.indexOf(groups[b][0].kurs);return ka-kb||a.localeCompare(b,"de",{numeric:true});});
   const cards=gl.map(g=>{const its=groups[g];const tk=its.filter(z=>isMin(z)&&!isTermin(z));const dn=tk.filter(zpDone).length;
     const lateG=tk.some(zpLate);
-    return `<section class="grp"><h2>${esc(g)}${tk.length?`<span class="${lateG?"late":""}">${dn} von ${tk.length}</span>`:""}</h2>${its.map(z=>zRow(z,w)).join("")}</section>`;}).join("");
+    // Offenes zuerst, Erledigtes danach, Zusatz zuletzt. Am Schreibtisch sind nur die ersten Zeilen sichtbar, der Rest per "+N weitere"
+    const rank=z=>isTermin(z)?1:!isMin(z)?3:zpDone(z)?2:0;
+    const sorted=its.map((z,k)=>({z,k})).sort((a,b)=>rank(a.z)-rank(b.z)||a.k-b.k).map(x=>x.z);
+    const CAP=3;let shown=0;const ex=!!(st.exp&&st.exp[g]);
+    const rows=sorted.map(z=>{const vis=shown<CAP&&isMin(z)||(isTermin(z)&&shown<CAP);if(vis)shown++;return zRow(z,w).replace('<div class="row','<div class="'+(vis?"":"xr ")+'row');}).join("");
+    const hid=sorted.length-shown;
+    const more=hid?`<button class="more2" data-grp="${esc(g)}">${ex?"Weniger":"+"+hid+(sorted.filter(z=>isMin(z)||isTermin(z)).length===shown?" Zusatz":" weitere")}</button>`:"";
+    return `<section class="grp${ex?" ex":""}"><h2>${esc(g)}${tk.length?`<span class="${lateG?"late":""}">${dn} von ${tk.length}</span>`:""}</h2>${rows}${more}</section>`;}).join("");
   const free=!w.items.length?`<p class="free">${esc(PAUSE[w.key]||"Keine Aufgaben laut Zeitplan.")}</p>`:"";
   return `<div class="zhead"><h1>Zeitplan</h1>${i!==nowI?`<button class="pill" data-go="${nowI}">Diese Woche</button>`:""}</div>
   <div class="wsw"><button class="chev" data-go="${i-1}" aria-label="Vorige Woche" ${i===0?"disabled":""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -510,6 +526,7 @@ document.addEventListener("click",e=>{
   if(el=q("[data-end]")){const r=running();if(r){r.ende=+el.dataset.end;pushSeg(r);st.other=false;save();render();sync();}return;}
   if(q("[data-endsave]")){const r=running();const v=($("#othtime").value||"");if(r&&/^\d\d:\d\d$/.test(v)){const s0=new Date(num(r.start));const d=new Date(s0);d.setHours(+v.slice(0,2),+v.slice(3),0,0);if(d<s0)d.setDate(d.getDate()+1);if(d.getTime()>Date.now())return;r.ende=d.getTime();pushSeg(r);st.other=false;save();render();sync();}return;}
   if(q("[data-keep]")){const r=running();try{if(r)sessionStorage.setItem("keep-"+r.id,"1");}catch(_){}st.other=false;render();return;}
+  if(el=q("[data-grp]")){st.exp=st.exp||{};st.exp[el.dataset.grp]=!st.exp[el.dataset.grp];render();return;}
   if(el=q("[data-day]")){st.sel=+el.dataset.day;const key=iso(addD(new Date(),-(13-st.sel)));st.days[key]=true;if(!st.allDays&&Math.round((new Date()-day(key))/864e5)>=10)st.allDays=true;render();const n=document.getElementById("d-"+key);if(n)n.scrollIntoView({behavior:"smooth",block:"center"});return;}
   if(el=q("[data-dayt]")){const k=el.dataset.dayt;st.days[k]=!st.days[k];render();return;}
   if(q("[data-alldays]")){st.allDays=!st.allDays;render();return;}
