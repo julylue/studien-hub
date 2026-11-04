@@ -256,7 +256,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="14";
+const APP_V="15";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -309,7 +309,12 @@ function overdue(){return st.zp.filter(zpLate);}
 
 /* ---------- Zeiterfassung ---------- */
 const GOAL=18;
-const num=x=>{const n=+x;return isFinite(n)?n:0;};
+const num=x=>{const n=+x;if(isFinite(n))return n;
+  /* Zeit als Text, z. B. "2026-11-04 00:35" (lokale Zeit, so schreibt die Lernsession) oder ISO mit Zeitzone */
+  const t=String(x||"").trim();const m=t.match(/^(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)/);
+  if(m){if(/(Z|[+-]\d\d:?\d\d)$/.test(t)){const p=Date.parse(t);if(isFinite(p))return p;}
+    return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]).getTime();}
+  return 0;};
 const segMs=z=>num(z.minuten)?num(z.minuten)*60000:(num(z.start)?(num(z.ende)||Date.now())-num(z.start):0);
 const segDay=z=>iso(new Date(num(z.start)||num(z.ende)));
 const running=()=>st.zeit.find(z=>num(z.start)&&!num(z.ende)&&!num(z.minuten));
