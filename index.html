@@ -238,6 +238,9 @@ h1.head{font-size:30px;margin-top:14px}
 .ck span{border-radius:8px}
 .ck.on span{background:var(--accent)}
 .tag.late,.state span.late,.grp h2 span.late{color:var(--late)}
+.two{display:inline-flex;flex-direction:column;align-items:flex-end;line-height:1.25;text-align:right}.chip.two{border-radius:10px;padding:3px 9px}
+.two small{font-size:11px;font-weight:600;opacity:.8}
+.chip.crit{background:var(--late);color:#fff;font-weight:800}.tag.crit{color:var(--late);font-weight:800}
 .bar,.bar0{height:6px;border-radius:3px;background:var(--line)} .bar i,.bar0 i{height:6px;border-radius:3px;background:var(--accent)}
 .tile b{color:var(--accent);font-size:30px}
 .clock{color:var(--accent);font-size:72px;letter-spacing:-.03em}
@@ -266,7 +269,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="20";
+const APP_V="21";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -316,6 +319,15 @@ function zpDone(z){return isDone(z)||st.rows.some(r=>String(r.baustein)===String
 const isUnk=z=>/^unklar$/i.test(String(z.status||"").trim())&&!zpDone(z);
 const zpLate=z=>isMin(z)&&!isTermin(z)&&!zpDone(z)&&d10(z.ende)&&d10(z.ende)<TODAY();
 function overdue(){return st.zp.filter(zpLate);}
+/* Eigenes Plan-Datum (ende) und echte Frist (frist) getrennt zeigen: überfällig ab Plan-Datum, kritisch erst 3 Tage vor der echten Frist */
+const fristLeft=z=>{const f=day(z.frist),t=day(TODAY());return f&&t?Math.round((f-t)/864e5):null;};
+const zpCrit=z=>!!z.frist&&!zpDone(z)&&!isTermin(z)&&fristLeft(z)<=3;
+const leftTxt=n=>n<0?"Frist verpasst":n===0?"heute":n===1?"noch 1 Tag":"noch "+n+" Tage";
+function fristChip(z,cls){ // zweizeilig: oben Plan, unten echte Frist
+  const late=zpLate(z),crit=zpCrit(z);
+  const top=crit?"Frist "+dm(z.frist):(late?"seit ":"bis ")+dm(z.ende);
+  const bot=crit?leftTxt(fristLeft(z)):"Frist "+dm(z.frist);
+  return `<span class="${cls} two ${crit?"crit":late?"late":""}">${esc(top)}<small>${esc(bot)}</small></span>`;}
 
 /* ---------- Zeiterfassung ---------- */
 const GOAL=18;
@@ -368,8 +380,8 @@ function tagOf(r){
   if(isZ(r))return {t:"Zusatz",c:""};
   const z=r.baustein?zpById(r.baustein):null;
   if(z&&isUnk(z))return {t:"prüfen",c:"late",box:"unk"};
+  if(z&&z.frist&&!zpDone(z))return {html:fristChip(z,"tag"),box:zpLate(z)?"late":""};
   if(z&&zpLate(z))return {t:"seit "+dm(z.ende),c:"late",box:"late"};
-  if(z&&z.frist)return {t:"bis "+dm(z.frist),c:""};
   return {t:"diese Woche",c:""};
 }
 const REFRESH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>';
@@ -384,7 +396,7 @@ function vOd(){ // Liste der überfälligen Aufgaben, über "x Aufgaben aus frü
   const od=overdue().slice().sort((a,b)=>d10(a.ende).localeCompare(d10(b.ende)));
   const wk=z=>{const a=day(z.woche),f=day(FIRST);return a&&f?"Woche "+(Math.round((a-f)/(7*864e5))+1):"";};
   const rows=od.map(z=>{const sub=[KURS[z.kurs]||z.kurs||"",wk(z),isTermin(z)?"":`${dm(z.start)}–${dm(z.ende)}`].filter(Boolean).join(" · ");
-    return `<div class="row"><button class="ck ${isUnk(z)?"unk":"late"}" data-tog="zp:${esc(z.id)}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(z.titel)}</span><span class="s">${esc(sub)}</span></span><span class="tag late">seit ${esc(dm(z.ende))}</span></div>`;}).join("");
+    return `<div class="row"><button class="ck ${isUnk(z)?"unk":"late"}" data-tog="zp:${esc(z.id)}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(z.titel)}</span><span class="s">${esc(sub)}</span></span>${z.frist?fristChip(z,"tag"):`<span class="tag late">seit ${esc(dm(z.ende))}</span>`}</div>`;}).join("");
   return `<div class="sheet"><button data-odclose aria-label="Schließen"></button><div class="p" role="dialog" aria-label="Aus früheren Wochen offen">
   <div class="h"><h2>Aus früheren Wochen offen</h2><button data-odclose>Fertig</button></div><div class="l odl">${rows||`<p class="none">Alles erledigt.</p>`}</div></div></div>`;
 }
@@ -400,16 +412,19 @@ function vNext(){
   const by={};od.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+1);
   const mx=Math.max(0,...Object.values(by));const top=Object.keys(by).filter(k=>by[k]===mx).map(k=>KURS[k]||k);
   const most=n>1&&top.length<=2?` Am meisten bei ${top.join(" und ")}.`:"";
-  const head=n?"Du hängst hinterher.":"Du bist im Plan.";
-  const sum=n?`<button class="sl" data-od aria-haspopup="dialog">${n} ${n===1?"Aufgabe":"Aufgaben"} aus früheren Wochen</button> ${n===1?"ist":"sind"} noch offen.${esc(most)}`:"Alles aus früheren Wochen ist erledigt.";
+  const crit=st.zp.filter(z=>zpCrit(z)&&isMin(z));
+  const head=crit.length?"Es wird knapp.":n?"Du hängst hinterher.":"Du bist im Plan.";
+  const critTxt=crit.length?crit.map(z=>`${z.titel}: ${fristLeft(z)<0?"Frist verpasst":"echte Frist "+dm(z.frist)+", "+leftTxt(fristLeft(z))}.`).join(" ")+" ":"";
+  const calm=!crit.length&&od.some(z=>z.frist||st.zp.some(q=>q.frist&&q.gruppe===z.gruppe&&!zpDone(q)))?" Die echten Fristen sind noch nicht erreicht.":"";
+  const sum=esc(critTxt)+(n?`<button class="sl" data-od aria-haspopup="dialog">${n} ${n===1?"Aufgabe":"Aufgaben"} aus früheren Wochen</button> ${n===1?"ist":"sind"} noch offen.${esc(most)}${esc(calm)}`:"Alles aus früheren Wochen ist erledigt.");
   const q=queueList();const cur=q[0];const rest=q.slice(1);
   const card=cur?vCard(cur):`<div class="empty"><b>Nichts mehr offen</b>Für diese Woche ist alles erledigt.</div>`;
   const S=stats();
   const statRow=`<a class="stat" href="#verlauf"><span class="g"><span><small>Diese Woche</small><b>${fmtH1(S.wk/36e5)} h</b> <i>von ${GOAL} h</i></span><span><small>Ø pro Tag</small><b>${fmtH1(S.avg/36e5)} h</b> <i>Ziel ${fmtH1(GOAL/7)} h</i></span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></a>`;
   const toggle=rest.length?`<button class="toggle" data-open aria-expanded="${st.open}">${st.open?"Weniger anzeigen":`Ganze Liste (${rest.length})`}</button>`:"";
   const list=st.open&&rest.length?`<div class="list">${rest.map(r=>{const t=tagOf(r);
-    return `<div class="row"><button class="ck ${t.box||""}" data-tog="${esc(r.id)}" aria-label="${esc(r.schritt)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(r.schritt)}</span><span class="s">${esc(whereOf(r))}</span></span><span class="tag ${t.c}">${esc(t.t)}</span></div>`;}).join("")}</div>`:"";
-  return `<div class="dl"><p class="date">${date}</p>${vStand()}</div><h1 class="head" style="color:var(${n?"--late":"--ok"})">${head}</h1><p class="sum">${sum}</p>${statRow}${card}${toggle}${list}`;
+    return `<div class="row"><button class="ck ${t.box||""}" data-tog="${esc(r.id)}" aria-label="${esc(r.schritt)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(r.schritt)}</span><span class="s">${esc(whereOf(r))}</span></span>${t.html||`<span class="tag ${t.c}">${esc(t.t)}</span>`}</div>`;}).join("")}</div>`:"";
+  return `<div class="dl"><p class="date">${date}</p>${vStand()}</div><h1 class="head" style="color:var(${n||crit.length?"--late":"--ok"})">${head}</h1><p class="sum">${sum}</p>${statRow}${card}${toggle}${list}`;
 }
 
 const PLAY='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
@@ -549,7 +564,7 @@ function zRow(z,w){
   let chip="";
   if(!min)chip=`<span class="chip z">${/nicht abgefragt/.test(z.hinweis||"")?"nicht nötig":"Zusatz"}</span>`;
   else if(unk)chip=`<span class="chip late">unklar</span>`;
-  else if(z.frist&&!d)chip=`<span class="chip ${late?"late":""}">bis ${esc(dm(z.frist))}</span>`;
+  else if(z.frist&&!d)chip=fristChip(z,"chip");
   else if(!d&&d10(z.ende)>iso(w.e))chip=`<span class="chip">bis ${esc(dm(z.ende))}</span>`;
   else if(late)chip=`<span class="chip late">seit ${esc(dm(z.ende))}</span>`;
   const sub=z.hinweis&&min&&!/^Zusatz/.test(z.hinweis)?`<span class="s">${esc(z.hinweis)}</span>`:"";
