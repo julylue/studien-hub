@@ -266,7 +266,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="19";
+const APP_V="20";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -445,7 +445,7 @@ function vHeat(){
   const cnt=Math.min(span,HM_R*7);let n=0;for(let k=0;k<cnt;k++)if(dayMs(iso(addD(t,-k))))n++;
   return `<section class="chart heat"><div class="ch"><p class="lbl">Lerntage</p><b>${n} von ${cnt}</b></div>
   <div class="hmg">${cells}</div>
-  <div class="hmf"><span>${pre?"Umrandet: vor Beginn der Zeiterfassung":""}</span><span class="hk">weniger<i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i>mehr</span></div></section>`;
+  <div class="hmf" style="justify-content:flex-end"><span class="hk">weniger<i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i>mehr</span></div></section>`;
 }
 
 /* ---------- Verlauf ---------- */
