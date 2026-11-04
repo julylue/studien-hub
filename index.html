@@ -65,6 +65,8 @@ h1.head{margin:24px 0 0;font-size:36px;line-height:1.12;font-weight:800;letter-s
 .ck.late span{border-color:var(--lateb)} .ck.unk span{border:2px dashed var(--lateb)}
 .ck.on span{border:0;background:var(--btn)} .ck.on svg{opacity:1}
 .tx{flex:1;min-width:0}
+.tx.pick{text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;display:block}
+.pickh{font-size:13px;color:var(--muted);margin:2px 4px 6px}
 .tx .t{display:block;font-size:15px}
 .tx .s{display:block;font-size:12px;color:var(--faint);margin-top:2px}
 .row.d .tx .t{color:var(--faint);text-decoration:line-through}
@@ -269,7 +271,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="23";
+const APP_V="24";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -417,13 +419,17 @@ function vNext(){
   const critTxt=crit.length?crit.map(z=>`${z.titel}: ${fristLeft(z)<0?"Frist verpasst":"echte Frist "+dm(z.frist)+", "+leftTxt(fristLeft(z))}.`).join(" ")+" ":"";
   const calm=!crit.length&&od.some(z=>z.frist||st.zp.some(q=>q.frist&&q.gruppe===z.gruppe&&!zpDone(q)))?" Die echten Fristen sind noch nicht erreicht.":"";
   const sum=esc(critTxt)+(n?`<button class="sl" data-od aria-haspopup="dialog">${n} ${n===1?"Aufgabe":"Aufgaben"} aus früheren Wochen</button> ${n===1?"ist":"sind"} noch offen.${esc(most)}${esc(calm)}`:"Alles aus früheren Wochen ist erledigt.");
-  const q=queueList();const cur=q[0];const rest=q.slice(1);
+  const q=queueList();const run=running();
+  /* Gewählte Aufgabe vor laufender Uhr vor Empfehlung: July kann jederzeit etwas anderes nehmen */
+  const byPick=st.pick?q.find(r=>String(r.id)===String(st.pick)):null;
+  const byRun=run?q.find(r=>refsOf(r).has(String(run.ref))):null;
+  const cur=byPick||byRun||q[0];const rest=q.filter(r=>r!==cur);
   const card=cur?vCard(cur):`<div class="empty"><b>Nichts mehr offen</b>Für diese Woche ist alles erledigt.</div>`;
   const S=stats();
   const statRow=`<a class="stat" href="#verlauf"><span class="g"><span><small>Diese Woche</small><b>${fmtH1(S.wk/36e5)} h</b> <i>von ${GOAL} h</i></span><span><small>Ø pro Tag</small><b>${fmtH1(S.avg/36e5)} h</b> <i>Ziel ${fmtH1(GOAL/7)} h</i></span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></a>`;
-  const toggle=rest.length?`<button class="toggle" data-open aria-expanded="${st.open}">${st.open?"Weniger anzeigen":`Ganze Liste (${rest.length})`}</button>`:"";
-  const list=st.open&&rest.length?`<div class="list">${rest.map(r=>{const t=tagOf(r);
-    return `<div class="row"><button class="ck ${t.box||""}" data-tog="${esc(r.id)}" aria-label="${esc(r.schritt)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(r.schritt)}</span><span class="s">${esc(whereOf(r))}</span></span>${t.html||`<span class="tag ${t.c}">${esc(t.t)}</span>`}</div>`;}).join("")}</div>`:"";
+  const toggle=rest.length?`<button class="toggle" data-open aria-expanded="${st.open}">${st.open?"Weniger anzeigen":`Andere Aufgabe wählen (${rest.length})`}</button>`:"";
+  const list=st.open&&rest.length?`<div class="list"><p class="pickh">Tippe auf eine Aufgabe, um sie jetzt zu machen.</p>${rest.map(r=>{const t=tagOf(r);
+    return `<div class="row"><button class="ck ${t.box||""}" data-tog="${esc(r.id)}" aria-label="${esc(r.schritt)} abhaken"><span>${CHECK}</span></button><button class="tx pick" data-pick="${esc(r.id)}" aria-label="${esc(r.schritt)} jetzt machen"><span class="t">${esc(r.schritt)}</span><span class="s">${esc(whereOf(r))}</span></button>${t.html||`<span class="tag ${t.c}">${esc(t.t)}</span>`}</div>`;}).join("")}</div>`:"";
   return `<div class="dl"><p class="date">${date}</p>${vStand()}</div><h1 class="head" style="color:var(${n||crit.length?"--late":"--ok"})">${head}</h1><p class="sum">${sum}</p>${statRow}${card}${toggle}${list}`;
 }
 
@@ -610,7 +616,8 @@ function markDone(id){if(String(id).startsWith("zp:")){setZp(String(id).slice(3)
 document.addEventListener("click",e=>{
   const q=s=>e.target.closest(s);
   let el;
-  if(el=q("[data-start]")){const x=itemById(el.dataset.start);if(x){startFor(x);save();render();sync();}return;}
+  if(el=q("[data-pick]")){st.pick=el.dataset.pick;st.open=false;render();try{window.scrollTo({top:0,behavior:"smooth"});const c=$(".colL");if(c)c.scrollTop=0;}catch(_){}return;}
+  if(el=q("[data-start]")){const x=itemById(el.dataset.start);if(x){st.pick=String(x.id);startFor(x);save();render();sync();}return;}
   if(q("[data-pause]")){if(stopRunning()){save();render();toast("Pausiert");sync();}return;}
   if(el=q("[data-fertig]")){stopRunning();markDone(el.dataset.fertig);commit(true);return;}
   if(el=q("[data-min]")){addManual(st.ask,+el.dataset.min);st.ask=null;commit(true);return;}
@@ -621,8 +628,8 @@ document.addEventListener("click",e=>{
   if(q("[data-endsave]")){const r=running();const v=($("#othtime").value||"");if(r&&/^\d\d:\d\d$/.test(v)){const s0=new Date(num(r.start));const d=new Date(s0);d.setHours(+v.slice(0,2),+v.slice(3),0,0);if(d<s0)d.setDate(d.getDate()+1);if(d.getTime()>Date.now())return;r.ende=d.getTime();pushSeg(r);st.other=false;save();render();sync();}return;}
   if(q("[data-keep]")){const r=running();try{if(r)sessionStorage.setItem("keep-"+r.id,"1");}catch(_){}st.other=false;render();return;}
   if(el=q("[data-grp]")){st.exp=st.exp||{};st.exp[el.dataset.grp]=!st.exp[el.dataset.grp];render();return;}
-  if(el=q("[data-hm]")){const key=el.dataset.hm;const t0=day(iso(ltNow()));const k=Math.round((t0-day(key))/864e5);if(k<=13)st.sel=13-k;st.days[key]=true;if(!st.allDays&&k>=10)st.allDays=true;render();const n=document.getElementById("d-"+key);if(n)n.scrollIntoView({behavior:"smooth",block:"center"});return;}
-  if(el=q("[data-day]")){st.sel=+el.dataset.day;const key=iso(addD(ltNow(),-(13-st.sel)));st.days[key]=true;if(!st.allDays&&Math.round((day(iso(ltNow()))-day(key))/864e5)>=10)st.allDays=true;render();const n=document.getElementById("d-"+key);if(n)n.scrollIntoView({behavior:"smooth",block:"center"});return;}
+  if(el=q("[data-hm]")){const key=el.dataset.hm;const t0=day(iso(ltNow()));const k=Math.round((t0-day(key))/864e5);if(k<=13)st.sel=13-k;st.days[key]=true;if(!st.allDays&&k>=7)st.allDays=true;render();const n=document.getElementById("d-"+key);if(n)n.scrollIntoView({behavior:"smooth",block:"center"});return;}
+  if(el=q("[data-day]")){st.sel=+el.dataset.day;const key=iso(addD(ltNow(),-(13-st.sel)));st.days[key]=true;if(!st.allDays&&Math.round((day(iso(ltNow()))-day(key))/864e5)>=7)st.allDays=true;render();const n=document.getElementById("d-"+key);if(n)n.scrollIntoView({behavior:"smooth",block:"center"});return;}
   if(el=q("[data-dayt]")){const k=el.dataset.dayt;st.days[k]=!st.days[k];render();return;}
   if(q("[data-alldays]")){st.allDays=!st.allDays;render();return;}
   if(e.target.closest("[data-open]")){st.open=!st.open;render();return;}
