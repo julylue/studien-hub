@@ -153,7 +153,7 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
 .bars button{height:100%;display:flex;align-items:flex-end}.bars span{width:100%;border-radius:6px}
 .lbls{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:5px;margin-top:6px}.lbls span{text-align:center;font-size:10px}
 .dday{border-top:1px solid var(--soft)}
-.hmg{margin-top:14px;display:grid;grid-template-columns:22px repeat(8,minmax(0,1fr));gap:5px;align-items:center}
+.hmg{margin-top:14px;display:grid;grid-template-columns:36px repeat(7,minmax(0,1fr));gap:5px;align-items:center}.hmg .hc{text-align:center}
 .hmg>span{font-size:10px;font-weight:600;color:var(--faint);white-space:nowrap}.hmg>span.hl{text-align:left}
 .hmg i,.hmg button,.hk i{display:block;aspect-ratio:1;border-radius:6px;background:var(--track)}
 .hmg .fu{background:none}
@@ -266,7 +266,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="17";
+const APP_V="18";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -424,27 +424,27 @@ function vCard(cur){
   return `<section class="now"><p class="lbl">Als Nächstes</p>${head}${cur.notiz?`<p class="why">${esc(cur.notiz)}</p>`:""}<button class="done" data-start="${esc(cur.id)}">${PLAY}Starten</button><button class="plain" data-tog="${esc(cur.id)}">Ohne Uhr abhaken</button></section>`;
 }
 
-/* ---------- Lerntage-Raster: Zeilen Mo bis So, Spalten die letzten 8 Wochen ---------- */
-const HM_W=8;
+/* ---------- Lerntage-Raster: lückenlos, nur vergangene Tage ----------
+   Je Zeile 7 aufeinanderfolgende Tage, das letzte Feld unten rechts ist heute (Lerntag bis 05:00).
+   Zeilen wachsen wöchentlich mit, höchstens 7 (49 Tage), danach rollt das Raster weiter. */
+const HM_R=7;
 const hmLvl=ms=>{const h=ms/36e5;return h<=0?0:h<1?1:h<2?2:h<3.5?3:4;};
 function vHeat(){
-  const t=ltNow();const today=iso(t);const cur=monday(t);
-  /* Nur Vergangenes: Spalten von Semesterbeginn (höchstens 8 Wochen zurück) bis zur laufenden Woche, nichts danach */
-  let start=addD(cur,-7*(HM_W-1));if(iso(start)<FIRST)start=monday(day(FIRST));
-  const nW=Math.round((cur-start)/(7*864e5))+1;
+  const t=day(iso(ltNow()));const today=iso(t);
   const first=st.zeit.map(segDay).filter(Boolean).sort()[0]||today;
-  const WD=["Mo","Di","Mi","Do","Fr","Sa","So"];let cells="",heads="";
-  for(let w=0;w<nW;w++){const m=addD(start,7*w);heads+=`<span>${(nW-1-w)%2?"":m.getDate()+"."+(m.getMonth()+1)+"."}</span>`;}
-  let pre=false;
-  for(let r=0;r<7;r++){cells+=`<span class="hl">${r%2?"":WD[r]}</span>`;
-    for(let w=0;w<nW;w++){const d=addD(start,7*w+r);const key=iso(d);
-      if(key>today){cells+=`<i class="fu"></i>`;continue;}
+  const span=Math.round((t-day(first))/864e5)+1;
+  const rows=Math.min(HM_R,Math.max(1,Math.ceil(span/7)));
+  const start=addD(t,-(rows*7-1));
+  const WD=["So","Mo","Di","Mi","Do","Fr","Sa"];let cells="<span></span>",pre=false;
+  for(let c=0;c<7;c++)cells+=`<span class="hc">${WD[addD(start,c).getDay()]}</span>`;
+  for(let r=0;r<rows;r++){const rs=addD(start,7*r);cells+=`<span class="hl">${rs.getDate()}.${rs.getMonth()+1}.</span>`;
+    for(let c=0;c<7;c++){const d=addD(rs,c);const key=iso(d);
       if(key<first){pre=true;cells+=`<i class="pre"></i>`;continue;}
-      const ms=dayMs(key);const lv=hmLvl(ms);
-      cells+=`<button data-hm="${key}" class="l${lv}${key===today?" td":""}" aria-label="${d.getDate()}.${d.getMonth()+1}., ${ms?fmtH(ms):"nicht gelernt"}"></button>`;}}
-  let n=0,m=0;for(let d=day(first);iso(d)<=today;d=addD(d,1)){m++;if(dayMs(iso(d)))n++;}
-  return `<section class="chart heat"><div class="ch"><p class="lbl">Lerntage</p><b>${n} von ${m}</b></div>
-  <div class="hmg" style="grid-template-columns:22px repeat(${nW},minmax(0,34px))"><span></span>${heads}${cells}</div>
+      const ms=dayMs(key);
+      cells+=`<button data-hm="${key}" class="l${hmLvl(ms)}${key===today?" td":""}" aria-label="${d.getDate()}.${d.getMonth()+1}., ${ms?fmtH(ms):"nicht gelernt"}"></button>`;}}
+  let n=0;for(let k=0;k<span;k++)if(dayMs(iso(addD(t,-k))))n++;
+  return `<section class="chart heat"><div class="ch"><p class="lbl">Lerntage</p><b>${n} von ${span}</b></div>
+  <div class="hmg">${cells}</div>
   <div class="hmf"><span>${pre?"Umrandet: vor Beginn der Zeiterfassung":""}</span><span class="hk">weniger<i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i>mehr</span></div></section>`;
 }
 
