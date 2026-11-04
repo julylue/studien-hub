@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Studium">
-<meta name="theme-color" content="#e9efec" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f1513" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f8f6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151312" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Studium</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -210,15 +210,15 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
 }
 /* ===== Stil der Karten-App (übernommen 29.10.) ===== */
 :root,:root:not([data-theme="dark"]){
-  --bg:#e9efec; --bg2:#dfe8e4; --card:#ffffff; --ink:#15201c; --muted:#5d6b66; --faint:#7f8e88; --line:#d3ddd8; --soft:#e4efeb; --track:#e4efeb;
-  --box:#9fb0a9; --late:#b5400b; --lateb:#c4561c; --late-soft:#fbe9dd; --ok:#2b6a5b; --dis:#c3cfca; --accent:#2b6a5b; --hl:#d8ece5;
-  --btn:#2b6a5b; --btn-ink:#ffffff; --scrim:rgba(15,25,21,.38);
-  --shadow:0 1px 2px rgba(20,40,34,.06),0 12px 32px rgba(20,40,34,.12);
+  --bg:#f8f6f3; --bg2:#f1ede8; --card:#ffffff; --ink:#282422; --muted:#706864; --faint:#857c77; --line:#e9e4de; --soft:#f2ece6; --track:#efe9e3;
+  --box:#b3a9a3; --late:#8f3a1f; --lateb:#a5472a; --late-soft:#f3dfd3; --ok:#6f5a4c; --dis:#d8d0ca; --accent:#b0603f; --hl:#f6e6dd;
+  --btn:#b0603f; --btn-ink:#ffffff; --scrim:rgba(40,30,25,.38); --dot-live:#b0603f;
+  --shadow:0 1px 2px rgba(60,40,30,.06),0 12px 32px rgba(60,40,30,.10);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0f1513; --bg2:#131b18; --card:#1b2421; --ink:#e6eeeb; --muted:#97a6a0; --faint:#7d8c86; --line:#2b3632; --soft:#1f2d29; --track:#1f2d29;
-  --box:#5d6d67; --late:#f0915f; --lateb:#e0814f; --late-soft:#3a2418; --ok:#76b7a5; --dis:#3a4642; --accent:#76b7a5; --hl:#24423a;
-  --btn:#76b7a5; --btn-ink:#0f1513; --scrim:rgba(0,0,0,.55); --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45)}}
+  --bg:#151312; --bg2:#191614; --card:#201c1a; --ink:#f1ebe7; --muted:#a59c97; --faint:#8d847f; --line:#322b28; --soft:#2a2421; --track:#2a2421;
+  --box:#6e6560; --late:#f2a789; --lateb:#e4916f; --late-soft:#43271b; --ok:#cdb49c; --dis:#3d3532; --accent:#e09c7d; --hl:#3a271e;
+  --btn:#e09c7d; --btn-ink:#151312; --scrim:rgba(0,0,0,.55); --dot-live:#e09c7d; --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45)}}
 html,body{background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%) fixed}
 .main,.cols,.colL,.colR,.shell{background:transparent}
 nav{background:transparent;border-top:0}
@@ -269,7 +269,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="22";
+const APP_V="23";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
