@@ -153,6 +153,16 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
 .bars button{height:100%;display:flex;align-items:flex-end}.bars span{width:100%;border-radius:6px}
 .lbls{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:5px;margin-top:6px}.lbls span{text-align:center;font-size:10px}
 .dday{border-top:1px solid var(--soft)}
+.hmg{margin-top:14px;display:grid;grid-template-columns:22px repeat(8,minmax(0,1fr));gap:5px;align-items:center}
+.hmg>span{font-size:10px;font-weight:600;color:var(--faint);white-space:nowrap}.hmg>span.hl{text-align:left}
+.hmg i,.hmg button,.hk i{display:block;aspect-ratio:1;border-radius:6px;background:var(--track)}
+.hmg .fu{background:radial-gradient(circle,var(--line) 2.5px,transparent 3px)}
+.hmg .pre{background:none;box-shadow:inset 0 0 0 1px var(--line)}
+.l1{background:color-mix(in srgb,var(--accent) 28%,var(--track))!important}.l2{background:color-mix(in srgb,var(--accent) 52%,var(--track))!important}
+.l3{background:color-mix(in srgb,var(--accent) 76%,var(--track))!important}.l4{background:var(--accent)!important}
+.hmg .td{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--ink)}
+.hmf{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;font-size:11px;font-weight:600;color:var(--faint)}
+.hk{display:inline-flex;align-items:center;gap:3px;flex:none}.hk i{width:10px;border-radius:3px}.hk i:first-child{margin-left:3px}.hk i:last-child{margin-right:3px}
 .dh{width:100%;display:flex;align-items:center;gap:10px;padding:12px 0;font-size:15px}.dh span{flex:1;text-align:left}.dh b{font-size:15px}.dh b.z{color:var(--faint);font-weight:600}
 .dh svg{width:16px;height:16px;color:var(--muted);transition:transform .2s}.dh i{width:16px}.dday.on .dh svg{transform:rotate(180deg)}.dh:disabled{cursor:default}
 .drow{display:flex;align-items:center;gap:12px;padding:8px 0 8px 12px;border-left:2px solid var(--line);margin:0 0 6px 2px}.none{margin:0;padding:12px 0 14px;color:var(--muted);font-size:15px}
@@ -256,7 +266,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="15";
+const APP_V="16";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -316,7 +326,9 @@ const num=x=>{const n=+x;if(isFinite(n))return n;
     return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]).getTime();}
   return 0;};
 const segMs=z=>num(z.minuten)?num(z.minuten)*60000:(num(z.start)?(num(z.ende)||Date.now())-num(z.start):0);
-const segDay=z=>iso(new Date(num(z.start)||num(z.ende)));
+/* Ein Lerntag geht bis 05:00 Uhr: Nachtsessions zählen zum Vortag */
+const LT=5*36e5;const ltNow=()=>new Date(Date.now()-LT);
+const segDay=z=>iso(new Date((num(z.start)||num(z.ende))-LT));
 const running=()=>st.zeit.find(z=>num(z.start)&&!num(z.ende)&&!num(z.minuten));
 function refsOf(x){ // Wochenplan-Zeile oder Zeitplan-Baustein
   const out=new Set();
@@ -328,7 +340,7 @@ function fmtH(ms){const m=Math.round(ms/60000);if(m<60)return m+" Min";const h=M
 function fmtClock(ms){const m=Math.floor(ms/60000);return Math.floor(m/60)+":"+String(m%60).padStart(2,"0");}
 const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
 function dayMs(key){return st.zeit.filter(z=>segDay(z)===key).reduce((a,z)=>a+segMs(z),0);}
-function stats(){const t=new Date();const mo=monday(t);let wk=0;for(let d=new Date(mo);iso(d)<=iso(t);d=addD(d,1))wk+=dayMs(iso(d));
+function stats(){const t=ltNow();const mo=monday(t);let wk=0;for(let d=new Date(mo);iso(d)<=iso(t);d=addD(d,1))wk+=dayMs(iso(d));
   let s7=0;for(let k=0;k<7;k++)s7+=dayMs(iso(addD(t,-k)));return {wk,avg:s7/7};}
 function pushSeg(z){st.queue.push({t:"zeit",row:Object.assign({},z)});}
 function stopRunning(){const r=running();if(r){r.ende=Date.now();pushSeg(r);}return r;}
@@ -412,9 +424,31 @@ function vCard(cur){
   return `<section class="now"><p class="lbl">Als Nächstes</p>${head}${cur.notiz?`<p class="why">${esc(cur.notiz)}</p>`:""}<button class="done" data-start="${esc(cur.id)}">${PLAY}Starten</button><button class="plain" data-tog="${esc(cur.id)}">Ohne Uhr abhaken</button></section>`;
 }
 
+/* ---------- Lerntage-Raster: Zeilen Mo bis So, Spalten die letzten 8 Wochen ---------- */
+const HM_W=8;
+const hmLvl=ms=>{const h=ms/36e5;return h<=0?0:h<1?1:h<2?2:h<3.5?3:4;};
+function vHeat(){
+  const t=ltNow();const today=iso(t);const cur=monday(t);
+  let start=addD(cur,-7*(HM_W-1));if(iso(start)<FIRST)start=day(FIRST);
+  const first=st.zeit.map(segDay).filter(Boolean).sort()[0]||today;
+  const WD=["Mo","Di","Mi","Do","Fr","Sa","So"];let cells="",heads="";
+  for(let w=0;w<HM_W;w++){const m=addD(start,7*w);heads+=`<span>${w%2?"":m.getDate()+"."+(m.getMonth()+1)+"."}</span>`;}
+  let pre=false;
+  for(let r=0;r<7;r++){cells+=`<span class="hl">${r%2?"":WD[r]}</span>`;
+    for(let w=0;w<HM_W;w++){const d=addD(start,7*w+r);const key=iso(d);
+      if(key>today){cells+=`<i class="fu"></i>`;continue;}
+      if(key<first){pre=true;cells+=`<i class="pre"></i>`;continue;}
+      const ms=dayMs(key);const lv=hmLvl(ms);
+      cells+=`<button data-hm="${key}" class="l${lv}${key===today?" td":""}" aria-label="${d.getDate()}.${d.getMonth()+1}., ${ms?fmtH(ms):"nicht gelernt"}"></button>`;}}
+  let n=0,m=0;for(let d=day(first);iso(d)<=today;d=addD(d,1)){m++;if(dayMs(iso(d)))n++;}
+  return `<section class="chart heat"><div class="ch"><p class="lbl">Lerntage</p><b>${n} von ${m}</b></div>
+  <div class="hmg"><span></span>${heads}${cells}</div>
+  <div class="hmf"><span>${pre?"Umrandet: vor Beginn der Zeiterfassung":""}</span><span class="hk">weniger<i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i>mehr</span></div></section>`;
+}
+
 /* ---------- Verlauf ---------- */
 function vVerlauf(){
-  const S=stats();const t=new Date();const days=[];
+  const S=stats();const t=ltNow();const days=[];
   for(let k=13;k>=0;k--){const d=addD(t,-k);days.push({d,key:iso(d),ms:dayMs(iso(d)),today:k===0});}
   if(st.sel==null)st.sel=13;const sel=days[st.sel];
   const MAXH=Math.max(4,...days.map(x=>x.ms/36e5));const H=150;const y=h=>Math.round(h/MAXH*H);
@@ -438,6 +472,7 @@ function vVerlauf(){
   <div class="tile"><small>Ø pro Tag</small><b>${fmtH1(S.avg/36e5)} h</b><p>letzte 7 Tage, freie Tage zählen mit</p></div></div>
   <section class="chart"><div class="ch"><p class="lbl">Letzte 14 Tage</p><span class="leg"><span><i class="da"></i>Ø</span><span><i class="go"></i>Ziel</span></span></div>
   <div class="plot"><div class="ln da" style="bottom:${y(S.avg/36e5)}px"></div><div class="ln go" style="bottom:${y(GOAL/7)}px"></div><div class="bars">${bars}</div></div><div class="lbls">${labels}</div></section>
+  ${vHeat()}
   <section class="dayl"><p class="lbl" style="padding:2px 0 6px">Alle Tage</p>${shown.map(dayRow).join("")}${more}</section><div style="height:12px;flex:none"></div>`;
 }
 
@@ -569,7 +604,8 @@ document.addEventListener("click",e=>{
   if(q("[data-endsave]")){const r=running();const v=($("#othtime").value||"");if(r&&/^\d\d:\d\d$/.test(v)){const s0=new Date(num(r.start));const d=new Date(s0);d.setHours(+v.slice(0,2),+v.slice(3),0,0);if(d<s0)d.setDate(d.getDate()+1);if(d.getTime()>Date.now())return;r.ende=d.getTime();pushSeg(r);st.other=false;save();render();sync();}return;}
   if(q("[data-keep]")){const r=running();try{if(r)sessionStorage.setItem("keep-"+r.id,"1");}catch(_){}st.other=false;render();return;}
   if(el=q("[data-grp]")){st.exp=st.exp||{};st.exp[el.dataset.grp]=!st.exp[el.dataset.grp];render();return;}
-  if(el=q("[data-day]")){st.sel=+el.dataset.day;const key=iso(addD(new Date(),-(13-st.sel)));st.days[key]=true;if(!st.allDays&&Math.round((new Date()-day(key))/864e5)>=10)st.allDays=true;render();const n=document.getElementById("d-"+key);if(n)n.scrollIntoView({behavior:"smooth",block:"center"});return;}
+  if(el=q("[data-hm]")){const key=el.dataset.hm;const t0=day(iso(ltNow()));const k=Math.round((t0-day(key))/864e5);if(k<=13)st.sel=13-k;st.days[key]=true;if(!st.allDays&&k>=10)st.allDays=true;render();const n=document.getElementById("d-"+key);if(n)n.scrollIntoView({behavior:"smooth",block:"center"});return;}
+  if(el=q("[data-day]")){st.sel=+el.dataset.day;const key=iso(addD(ltNow(),-(13-st.sel)));st.days[key]=true;if(!st.allDays&&Math.round((day(iso(ltNow()))-day(key))/864e5)>=10)st.allDays=true;render();const n=document.getElementById("d-"+key);if(n)n.scrollIntoView({behavior:"smooth",block:"center"});return;}
   if(el=q("[data-dayt]")){const k=el.dataset.dayt;st.days[k]=!st.days[k];render();return;}
   if(q("[data-alldays]")){st.allDays=!st.allDays;render();return;}
   if(e.target.closest("[data-open]")){st.open=!st.open;render();return;}
