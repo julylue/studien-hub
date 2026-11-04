@@ -269,7 +269,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="21";
+const APP_V="22";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -475,14 +475,14 @@ function vVerlauf(){
   // Alle Tage seit dem ersten Eintrag, neueste zuerst; jeder Tag aufklappbar
   const first=st.zeit.map(segDay).filter(Boolean).sort()[0]||iso(t);
   const all=[];for(let d=new Date(t);iso(d)>=first;d=addD(d,-1))all.push(iso(d));
-  const shown=st.allDays?all:all.slice(0,10);
+  const shown=st.allDays?all:all.slice(0,7);
   const dayRow=key=>{const d=day(key);const ms=dayMs(key);const open=!!st.days[key];
     const segs=st.zeit.filter(z=>segDay(z)===key);const by={};
     segs.forEach(z=>{const k=String(z.ref);(by[k]=by[k]||{titel:z.titel,kurs:z.kurs,ms:0}).ms+=segMs(z);});
     const title=(key===iso(t)?"Heute, ":WDL[d.getDay()]+", ")+d.getDate()+". "+MON[d.getMonth()];
     const items=open&&ms?Object.values(by).map(x=>`<div class="drow"><span class="tx"><span class="t">${esc(x.titel)}</span><span class="s">${esc(KURS[x.kurs]||x.kurs||"")}</span></span><span class="tag" style="color:var(--ink)">${fmtH(x.ms)}</span></div>`).join(""):"";
     return `<div class="dday ${open?"on":""}" id="d-${key}"><button class="dh" ${ms?`data-dayt="${key}"`:"disabled"}><span>${esc(title)}</span><b class="${ms?"":"z"}">${ms?fmtH(ms):"–"}</b>${ms?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`:"<i></i>"}</button>${items}</div>`;};
-  const more=all.length>10?`<button class="plain" data-alldays>${st.allDays?"Weniger anzeigen":`Ältere Tage (${all.length-10})`}</button>`:"";
+  const more=all.length>7?`<button class="plain" data-alldays>${st.allDays?"Weniger anzeigen":`Ältere Tage (${all.length-7})`}</button>`:"";
   return `<a class="back" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Als Nächstes</a>
   <h1 class="vh">Verlauf</h1>
   <div class="tiles"><div class="tile"><small>Diese Woche</small><b>${fmtH1(S.wk/36e5)} h</b><div class="bar0"><i style="width:${Math.min(100,S.wk/36e5/GOAL*100)}%"></i></div><p>von ${GOAL} h Ziel</p></div>
@@ -490,7 +490,7 @@ function vVerlauf(){
   <section class="chart"><div class="ch"><p class="lbl">Letzte 14 Tage</p><span class="leg"><span><i class="da"></i>Ø</span><span><i class="go"></i>Ziel</span></span></div>
   <div class="plot"><div class="ln da" style="bottom:${y(S.avg/36e5)}px"></div><div class="ln go" style="bottom:${y(GOAL/7)}px"></div><div class="bars">${bars}</div></div><div class="lbls">${labels}</div></section>
   ${vHeat()}
-  <section class="dayl"><p class="lbl" style="padding:2px 0 6px">Alle Tage</p>${shown.map(dayRow).join("")}${more}</section><div style="height:12px;flex:none"></div>`;
+  <section class="dayl"><p class="lbl" style="padding:2px 0 6px">${st.allDays?"Alle Tage":"Letzte 7 Tage"}</p>${shown.map(dayRow).join("")}${more}</section><div style="height:12px;flex:none"></div>`;
 }
 
 /* ---------- Abfragen ---------- */
