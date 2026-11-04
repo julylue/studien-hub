@@ -266,7 +266,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="18";
+const APP_V="19";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -425,15 +425,15 @@ function vCard(cur){
 }
 
 /* ---------- Lerntage-Raster: lückenlos, nur vergangene Tage ----------
-   Je Zeile 7 aufeinanderfolgende Tage, das letzte Feld unten rechts ist heute (Lerntag bis 05:00).
-   Zeilen wachsen wöchentlich mit, höchstens 7 (49 Tage), danach rollt das Raster weiter. */
-const HM_R=7;
+   Immer die letzten 4 Wochen: 4 Zeilen mit je 7 aufeinanderfolgenden Tagen,
+   das letzte Feld unten rechts ist heute (Lerntag bis 05:00). */
+const HM_R=4;
 const hmLvl=ms=>{const h=ms/36e5;return h<=0?0:h<1?1:h<2?2:h<3.5?3:4;};
 function vHeat(){
   const t=day(iso(ltNow()));const today=iso(t);
   const first=st.zeit.map(segDay).filter(Boolean).sort()[0]||today;
   const span=Math.round((t-day(first))/864e5)+1;
-  const rows=Math.min(HM_R,Math.max(1,Math.ceil(span/7)));
+  const rows=HM_R;
   const start=addD(t,-(rows*7-1));
   const WD=["So","Mo","Di","Mi","Do","Fr","Sa"];let cells="<span></span>",pre=false;
   for(let c=0;c<7;c++)cells+=`<span class="hc">${WD[addD(start,c).getDay()]}</span>`;
@@ -442,8 +442,8 @@ function vHeat(){
       if(key<first){pre=true;cells+=`<i class="pre"></i>`;continue;}
       const ms=dayMs(key);
       cells+=`<button data-hm="${key}" class="l${hmLvl(ms)}${key===today?" td":""}" aria-label="${d.getDate()}.${d.getMonth()+1}., ${ms?fmtH(ms):"nicht gelernt"}"></button>`;}}
-  let n=0;for(let k=0;k<span;k++)if(dayMs(iso(addD(t,-k))))n++;
-  return `<section class="chart heat"><div class="ch"><p class="lbl">Lerntage</p><b>${n} von ${span}</b></div>
+  const cnt=Math.min(span,HM_R*7);let n=0;for(let k=0;k<cnt;k++)if(dayMs(iso(addD(t,-k))))n++;
+  return `<section class="chart heat"><div class="ch"><p class="lbl">Lerntage</p><b>${n} von ${cnt}</b></div>
   <div class="hmg">${cells}</div>
   <div class="hmf"><span>${pre?"Umrandet: vor Beginn der Zeiterfassung":""}</span><span class="hk">weniger<i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i>mehr</span></div></section>`;
 }
