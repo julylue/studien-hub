@@ -156,7 +156,7 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
 .hmg{margin-top:14px;display:grid;grid-template-columns:22px repeat(8,minmax(0,1fr));gap:5px;align-items:center}
 .hmg>span{font-size:10px;font-weight:600;color:var(--faint);white-space:nowrap}.hmg>span.hl{text-align:left}
 .hmg i,.hmg button,.hk i{display:block;aspect-ratio:1;border-radius:6px;background:var(--track)}
-.hmg .fu{background:radial-gradient(circle,var(--line) 2.5px,transparent 3px)}
+.hmg .fu{background:none}
 .hmg .pre{background:none;box-shadow:inset 0 0 0 1px var(--line)}
 .l1{background:color-mix(in srgb,var(--accent) 28%,var(--track))!important}.l2{background:color-mix(in srgb,var(--accent) 52%,var(--track))!important}
 .l3{background:color-mix(in srgb,var(--accent) 76%,var(--track))!important}.l4{background:var(--accent)!important}
@@ -266,7 +266,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="16";
+const APP_V="17";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -429,20 +429,22 @@ const HM_W=8;
 const hmLvl=ms=>{const h=ms/36e5;return h<=0?0:h<1?1:h<2?2:h<3.5?3:4;};
 function vHeat(){
   const t=ltNow();const today=iso(t);const cur=monday(t);
-  let start=addD(cur,-7*(HM_W-1));if(iso(start)<FIRST)start=day(FIRST);
+  /* Nur Vergangenes: Spalten von Semesterbeginn (höchstens 8 Wochen zurück) bis zur laufenden Woche, nichts danach */
+  let start=addD(cur,-7*(HM_W-1));if(iso(start)<FIRST)start=monday(day(FIRST));
+  const nW=Math.round((cur-start)/(7*864e5))+1;
   const first=st.zeit.map(segDay).filter(Boolean).sort()[0]||today;
   const WD=["Mo","Di","Mi","Do","Fr","Sa","So"];let cells="",heads="";
-  for(let w=0;w<HM_W;w++){const m=addD(start,7*w);heads+=`<span>${w%2?"":m.getDate()+"."+(m.getMonth()+1)+"."}</span>`;}
+  for(let w=0;w<nW;w++){const m=addD(start,7*w);heads+=`<span>${(nW-1-w)%2?"":m.getDate()+"."+(m.getMonth()+1)+"."}</span>`;}
   let pre=false;
   for(let r=0;r<7;r++){cells+=`<span class="hl">${r%2?"":WD[r]}</span>`;
-    for(let w=0;w<HM_W;w++){const d=addD(start,7*w+r);const key=iso(d);
+    for(let w=0;w<nW;w++){const d=addD(start,7*w+r);const key=iso(d);
       if(key>today){cells+=`<i class="fu"></i>`;continue;}
       if(key<first){pre=true;cells+=`<i class="pre"></i>`;continue;}
       const ms=dayMs(key);const lv=hmLvl(ms);
       cells+=`<button data-hm="${key}" class="l${lv}${key===today?" td":""}" aria-label="${d.getDate()}.${d.getMonth()+1}., ${ms?fmtH(ms):"nicht gelernt"}"></button>`;}}
   let n=0,m=0;for(let d=day(first);iso(d)<=today;d=addD(d,1)){m++;if(dayMs(iso(d)))n++;}
   return `<section class="chart heat"><div class="ch"><p class="lbl">Lerntage</p><b>${n} von ${m}</b></div>
-  <div class="hmg"><span></span>${heads}${cells}</div>
+  <div class="hmg" style="grid-template-columns:22px repeat(${nW},minmax(0,34px))"><span></span>${heads}${cells}</div>
   <div class="hmf"><span>${pre?"Umrandet: vor Beginn der Zeiterfassung":""}</span><span class="hk">weniger<i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i>mehr</span></div></section>`;
 }
 
