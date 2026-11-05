@@ -129,7 +129,7 @@ h1.head{margin:24px 0 0;font-size:36px;line-height:1.12;font-weight:800;letter-s
 .clock{margin:16px 0 0;font-size:56px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}.row2 .done{margin-top:0}
 .done{display:flex;align-items:center;justify-content:center;gap:8px}.done svg{width:18px;height:18px}
-.done.sec{background:var(--track);color:var(--ink)}
+a.done{text-decoration:none}.done.sec{background:var(--track);color:var(--ink)}
 .plain{display:block;width:100%;margin-top:12px;padding:6px;text-align:center;font-size:14px;font-weight:700;color:var(--muted)}
 #mini{flex:none}
 .mini{display:flex;align-items:center;gap:12px;margin:0 16px 10px;padding:10px 12px 10px 14px;border-radius:16px;background:var(--btn);color:var(--btn-ink)}
@@ -271,7 +271,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="24";
+const APP_V="25";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -349,6 +349,8 @@ function refsOf(x){ // Wochenplan-Zeile oder Zeitplan-Baustein
   if(x._zpItem){out.add("zp:"+x.id);st.rows.filter(r=>String(r.baustein)===String(x.id)).forEach(r=>out.add(String(r.id)));}
   else{out.add(String(x.id));if(x.baustein){out.add("zp:"+x.baustein);st.rows.filter(r=>String(r.baustein)===String(x.baustein)).forEach(r=>out.add(String(r.id)));}}
   return out;}
+const KURS_URL="kurs/";
+const isKurs=x=>{const z=st.zp.find(q=>String(q.id)===String(x.baustein));return !!z&&/^kurs/i.test(String(z.art||""));};
 const segsFor=x=>{const r=refsOf(x);return st.zeit.filter(z=>r.has(String(z.ref)));};
 function fmtH(ms){const m=Math.round(ms/60000);if(m<60)return m+" Min";const h=Math.round(m/6)/10;return String(h).replace(".",",")+" h";}
 function fmtClock(ms){const m=Math.floor(ms/60000);return Math.floor(m/60)+":"+String(m%60).padStart(2,"0");}
@@ -439,6 +441,9 @@ function vCard(cur){
   const head=`<p class="where">${esc(whereOf(cur))}</p><p class="t">${esc(cur.schritt)}</p>`;
   if(mine)return `<section class="now"><p class="lbl">Läuft <span class="pillc live">seit ${hm(num(run.start))}</span></p>${head}<p class="clock" data-clock="${num(run.start)}">${fmtClock(Date.now()-num(run.start))}</p>
     <div class="row2"><button class="done sec" data-pause>Pause</button><button class="done" data-fertig="${esc(cur.id)}">Fertig</button></div></section>`;
+  if(isKurs(cur)){const ks=segs.filter(z=>z.quelle==="kurs");const tot=ks.reduce((a,z)=>a+segMs(z),0);
+    return `<section class="now"><p class="lbl">${ks.length?`Im Kurs begonnen <span class="pillc">bisher ${fmtH(tot)}</span>`:"Als Nächstes"}</p>${head}${cur.notiz?`<p class="why">${esc(cur.notiz)}</p>`:""}
+    <a class="done" href="${KURS_URL}" target="_blank" rel="noopener">${PLAY}${ks.length?"Im Kurs weitermachen":"Im Kurs starten"}</a><button class="plain" data-tog="${esc(cur.id)}">Lektion abgeschlossen</button></section>`;}
   if(segs.length){const tot=segs.reduce((a,z)=>a+segMs(z),0);
     return `<section class="now"><p class="lbl">Pausiert <span class="pillc">bisher ${fmtClock(tot)}</span></p>${head}${cur.notiz?`<p class="why">${esc(cur.notiz)}</p>`:""}
     <div class="row2"><button class="done" data-start="${esc(cur.id)}">${PLAY}Weiter</button><button class="done sec" data-fertig="${esc(cur.id)}">Fertig</button></div></section>`;}
