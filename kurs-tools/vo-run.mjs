@@ -7,7 +7,12 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 const KEY = process.env.ELEVENLABS_API_KEY;
-const RESERVE = +(process.env.RESERVE || 8000);         // Credits, die für die Karten-App übrig bleiben
+// Verteilung (Julys Wunsch 12.11.: Karten-App hat Vorrang, Kurs-Vertonung über den Monat streuen):
+// - CARD_MONTH Credits pro Abrechnungsmonat gehören der Karten-App; davon bleibt immer der Anteil für die
+//   restlichen Tage des Monats plus FLOOR frei.
+// - Der Kurs bekommt pro Tag höchstens (Monatskontingent - CARD_MONTH) / 30.
+const CARD_MONTH = +(process.env.CARD_MONTH || 15000);
+const FLOOR = +(process.env.FLOOR || 2000);
 const MAX_MIN = +(process.env.MAX_MIN || 40);           // Laufzeit in Minuten
 const COST = 0.25;                                      // Credits pro Zeichen (Flash ca. 0,2, mit Puffer)
 const DIR = 'kurs/vo';
@@ -26,10 +31,11 @@ const audioKey = Buffer.from(job.key, 'base64');
 const have = new Set(fs.readdirSync(DIR).filter(f => f.endsWith('.bin')).map(f => f.slice(0, -4)));
 const want = new Set(job.items.map(i => i.h));
 
+let sub = null;
 async function credits() {
   const r = await fetch('https://api.elevenlabs.io/v1/user/subscription', { headers: { 'xi-api-key': KEY } });
   if (!r.ok) throw new Error('subscription ' + r.status + ' ' + (await r.text()).slice(0, 200));
-  const j = await r.json(); return j.character_limit - j.character_count;
+  sub = await r.json(); return sub.character_limit - sub.character_count;
 }
 async function tts(text) {
   for (let a = 0; a < 4; a++) {
@@ -50,15 +56,18 @@ function seal(buf) {
 }
 
 let left = await credits();
-console.log('Credits frei:', left, '· Reserve:', RESERVE, '· Aufträge:', job.items.length, '· schon vorhanden:', [...have].filter(h => want.has(h)).length);
+const daysLeft = Math.max(0, (sub.next_character_count_reset_unix * 1000 - Date.now()) / 86400000);
+const RESERVE = Math.round(FLOOR + CARD_MONTH * Math.min(30, daysLeft) / 30);
+let budget = Math.max(0, Math.min((sub.character_limit - CARD_MONTH) / 30, left - RESERVE));
+console.log('Credits frei:', left, '· Tage bis Neustart:', daysLeft.toFixed(1), '· Reserve Karten-App:', RESERVE, '· Budget heute:', Math.round(budget), '· Aufträge:', job.items.length, '· schon vorhanden:', [...have].filter(h => want.has(h)).length);
 let made = 0, chars = 0, stop = '';
 for (const it of job.items) {
   if (have.has(it.h)) continue;
   if (Date.now() - t0 > MAX_MIN * 60000) { stop = 'Zeitlimit'; break; }
-  if (left - it.t.length * COST < RESERVE) { stop = 'Credit-Reserve erreicht'; break; }
+  if (it.t.length * COST > budget || left - it.t.length * COST < RESERVE) { stop = 'Tagesbudget oder Reserve erreicht'; break; }
   const mp3 = await tts(it.t);
   fs.writeFileSync(path.join(DIR, it.h + '.bin'), seal(mp3));
-  have.add(it.h); made++; chars += it.t.length;
+  have.add(it.h); made++; chars += it.t.length; budget -= it.t.length * 0.2;
   if (made % 20 === 0) { left = await credits(); console.log(made, 'neu, Credits frei:', left); }
   else left -= it.t.length * 0.2;
 }

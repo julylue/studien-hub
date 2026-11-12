@@ -10,4 +10,4 @@ Enthält nur Code, keine Kursinhalte. Die Inhalte liegen verschlüsselt in `kurs
   (Lektions-IDs = Reihenfolge der Vertonung). Nach jeder inhaltlichen Änderung an Lektionen erneut ausführen.
 - `vo-run.mjs`: läuft im Workflow `.github/workflows/vertonung.yml` (täglich und bei Änderung von jobs.enc),
   vertont fehlende Texte mit ElevenLabs (Stimme Max, Modell Flash v2.5) und legt sie verschlüsselt als
-  `kurs/vo/<hash>.bin` ab. Hält 8.000 Credits für die Karten-App frei. Braucht das Secret `ELEVENLABS_API_KEY`.
+  `kurs/vo/<hash>.bin` ab. Verteilt die Vertonung über den Monat: 15.000 Credits pro Monat gehören der Karten-App (anteilig für die Resttage plus 2.000 immer frei), der Kurs bekommt höchstens (Kontingent - 15.000) / 30 pro Tag. Braucht das Secret `ELEVENLABS_API_KEY`.
