@@ -413,6 +413,18 @@ header .brand{min-width:0}
 .openlist{padding-left:18px}
 @media (max-width:640px){.histrow{grid-template-columns:auto 1fr auto}.histtitle{grid-column:1/-1;grid-row:2}}
 .hubwarn{background:none;border:1px solid #6b5631;color:#e6c78a;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
+
+/* Tastatur (Rechner): Hinweise nur an Geräten mit Maus/Trackpad, wie in der Karten-App */
+@media (hover:none), (pointer:coarse) { .desk-only{display:none!important} }
+.khint{font-size:13px;color:var(--dim);margin:6px 0 0}
+.navmid{display:flex;flex-direction:column;align-items:center;gap:2px}
+.kbdhelp{background:none;border:none;color:var(--dim);font-size:12px;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.kbdhelp:hover{color:var(--muted)}
+.okey{display:inline-block;min-width:1.4em;margin-right:8px;color:var(--dim);font-family:var(--mono);font-size:12px}
+.kbd-on .rfrow.kfocus{box-shadow:inset 3px 0 0 var(--amber);background:var(--panel2);border-radius:6px}
+.kbdtab{width:100%;border-collapse:collapse;font-size:14px}
+.kbdtab td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.kbdtab td:first-child{white-space:nowrap;font-family:var(--mono);font-size:13px;color:var(--amber);width:1%}
 </style>
 </head>
 <body>
@@ -473,7 +485,7 @@ header .brand{min-width:0}
   <footer class="nav">
     <div class="navin">
       <button class="btn ghost" id="prev">Zurück</button>
-      <span class="pos" id="pos"></span>
+      <span class="navmid"><span class="pos" id="pos"></span><button class="kbdhelp desk-only" id="kbdhelp" type="button" title="Alle Tastenkürzel">Tastatur: ← → blättern · ? alle Tasten</button></span>
       <button class="btn primary" id="next">Weiter</button>
     </div>
   </footer>
@@ -5637,24 +5649,28 @@ function render() {
   }
   if (s.type === 'mc') {
     if (!S.order || S.order.length !== s.options.length) { S.order = s.options.map((_, k) => k); for (let i = S.order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [S.order[i], S.order[j]] = [S.order[j], S.order[i]]; } }
-    h += '<div class="opts" id="opts">' + S.order.map(k => '<button class="opt" data-k="' + k + '">' + s.options[k].t + '</button>').join('') + '</div>';
+    h += '<div class="opts" id="opts">' + S.order.map((k, n) => '<button class="opt" data-k="' + k + '">' + (n < 9 ? '<span class="okey desk-only">' + (n + 1) + '</span>' : '') + s.options[k].t + '</button>').join('') + '</div>';
+    if (!S.done) h += '<p class="khint desk-only">Tastatur: 1 bis ' + Math.min(9, s.options.length) + ' wählt eine Antwort.</p>';
   }
   if (s.type === 'rf') {
     S.rf = S.rf || [];
     h += '<div class="rflist">' + s.statements.map((a, k) => '<div class="rfrow" data-rf="' + k + '"><div class="rft"><span class="rfl">' + 'ABCDE'[k] + '</span><span class="rftx">' + a.t + '</span></div><div class="rfbtns"><button class="rfb' + (S.rf[k] === true ? ' sel' : '') + '" data-v="1">Richtig</button><button class="rfb' + (S.rf[k] === false ? ' sel' : '') + '" data-v="0">Falsch</button></div><div class="rfwhy"></div></div>').join('') + '</div>';
     h += '<div class="row"><button class="btn primary" id="rfcheck">Auswerten</button></div>';
+    if (!S.done) h += '<p class="khint desk-only">Tastatur: ↑ ↓ wählt die Aussage, → richtig, ← falsch, Enter wertet aus.</p>';
     if (s.source) h += '<p class="src">Quelle: ' + esc(s.source) + '</p>';
   }
   if (s.type === 'calc') {
     S.vals = S.vals || [];
     h += '<div class="task"><div class="tlabel">Deine Aufgabe</div>' + s.task + '<div class="fields">' + s.fields.map((f, k) => '<label class="field"><span class="flabel">' + f.label + '</span><input class="numin" data-f="' + k + '" inputmode="decimal" autocomplete="off" value="' + esc(S.vals[k] || '') + '"><span class="fmark" data-fm="' + k + '"></span></label>').join('') + '</div>';
     h += '<div class="row" style="margin-top:10px"><button class="btn primary" id="calccheck">Prüfen</button><button class="btn link" id="hintbtn">Hinweis zeigen</button></div><div class="hintbox" id="hint">' + s.hint + '</div></div>';
+    h += '<p class="khint desk-only">Tastatur: E springt ins erste Feld, Tab zum nächsten, Enter prüft, Esc verlässt das Feld, H zeigt einen Hinweis.</p>';
   }
   if (s.type === 'code' || s.type === 'num' || s.type === 'gap') {
     h += '<div class="task"><div class="tlabel">Deine Aufgabe</div>' + s.task;
     if (s.type === 'num') h += '<div class="row" style="margin-top:10px"><input class="numin" id="numin" inputmode="decimal" placeholder="Antwort" autocomplete="off"><button class="btn primary" id="numcheck">Antwort prüfen</button></div>';
     h += '<div class="row" style="margin-top:6px;gap:20px"><button class="btn link" id="hintbtn">Hinweis zeigen</button>' + (s.hint2 ? '<button class="btn link" id="hint2btn" style="display:none">Zweiter Hinweis</button>' : '') + (s.solution ? '<button class="btn link" id="solbtn" style="display:none">Lösung zeigen</button>' : '') + '</div>';
     h += '<div class="hintbox" id="hint">' + s.hint + '</div>' + (s.hint2 ? '<div class="hintbox" id="hint2">' + s.hint2 + '</div>' : '') + '</div>';
+    h += '<p class="khint desk-only">Tastatur: E springt ' + (s.type === 'code' ? 'in den Editor' : 'ins Eingabefeld') + ', Enter prüft' + (s.type === 'code' ? ' (im Editor Strg/Cmd + Enter führt aus)' : '') + ', Esc verlässt das Feld, H zeigt einen Hinweis.</p>';
   }
   h += '<div class="fb" id="fb"></div>';
   $('stepview').innerHTML = h;
@@ -5693,8 +5709,9 @@ function render() {
   if (s.type === 'rf') {
     document.querySelectorAll('.rfrow').forEach(row => {
       const k = +row.dataset.rf;
-      row.querySelectorAll('.rfb').forEach(b => b.onclick = () => { S.rf[k] = b.dataset.v === '1'; row.querySelectorAll('.rfb').forEach(x => x.classList.toggle('sel', x === b)); save(); });
+      row.querySelectorAll('.rfb').forEach(b => b.onclick = () => { S.rf[k] = b.dataset.v === '1'; row.querySelectorAll('.rfb').forEach(x => x.classList.toggle('sel', x === b)); save(); Keys.rfAfter(k); });
     });
+    Keys.rfStart(S);
     $('rfcheck').onclick = checkRF;
     if (S.done && S.rf.length === s.statements.length) checkRF();
   }
@@ -5753,6 +5770,130 @@ function lessonEndDialog() {
   $('lstay').onclick = () => ov.remove();
   if (next) $('lnext').onclick = () => { try { localStorage.setItem('lernkurs:lesson', next.id); localStorage.setItem('lernkurs:meta', JSON.stringify({ ts: Date.now(), lesson: next.id })); } catch (e) {} window.Cloud.flushNow(true); location.reload(); };
 }
+
+// ---------- Tastatur (Rechner): angelehnt an die Karten-App ----------
+// Pfeile und WASD: → / D weiter, ← / A zurück (Shift + Pfeil blättert immer), Enter = Hauptaktion des Schritts,
+// 1–9 wählt eine Antwort, F meldet einen Fehler, U merkt als unklar, H zeigt einen Hinweis, E springt ins Feld,
+// Esc verlässt ein Feld oder schließt, ? zeigt alle Tasten. In Eingabefeldern bleibt Tippen frei.
+const Keys = (function () {
+  let rfFocus = 0;
+  const vis = el => !!el && el.isConnected && getComputedStyle(el).display !== 'none' && !el.hidden;
+  const rows = () => [...document.querySelectorAll('.rfrow')];
+  function rfMark() { rows().forEach(r => r.classList.toggle('kfocus', +r.dataset.rf === rfFocus)); }
+  function rfStart(S) { const n = L.steps[state.cur].statements.length; const open = [...Array(n).keys()].find(k => S.rf[k] === undefined); rfFocus = open === undefined ? 0 : open; rfMark(); }
+  function rfAfter(k) { const n = rows().length, S = st(state.cur); let nx = [...Array(n).keys()].find(j => j > k && S.rf[j] === undefined); if (nx === undefined) nx = Math.min(n - 1, k + 1); rfFocus = nx; rfMark(); }
+  function help() {
+    if (document.getElementById('kbdov')) return;
+    const ov = document.createElement('div'); ov.className = 'lock'; ov.id = 'kbdov';
+    const R2 = [
+      ['→ oder D', 'Weiter (oder Überspringen)'], ['← oder A', 'Zurück'], ['Shift + ← →', 'Blättern, auch während einer Richtig-oder-falsch-Aufgabe'],
+      ['Enter', 'Hauptaktion: prüfen oder auswerten, ist der Schritt erledigt, weiter'],
+      ['1 bis 9', 'Antwort bei Auswahlfragen wählen'],
+      ['↑ ↓ (W S)', 'Richtig oder falsch: Aussage wählen, dann → richtig, ← falsch'],
+      ['E', 'In den Editor oder ins Eingabefeld springen'], ['Esc', 'Feld verlassen, danach gehen die Pfeile wieder; schließt auch Fenster und Menü'],
+      ['Strg/Cmd + Enter', 'Im Editor: Code ausführen'], ['H', 'Hinweis zeigen (zweimal: zweiter Hinweis)'],
+      ['U', 'Nicht verstanden? (für die Voice-Session merken)'], ['F', 'Fehler melden (im Feld: Enter sendet, Shift + Enter neue Zeile)'],
+      ['M', 'Menü mit Lektionen und Kapiteln'], ['?', 'Diese Übersicht']
+    ];
+    ov.innerHTML = '<div class="lockbox" style="width:min(560px,92vw)"><h3>Tastenkürzel</h3><table class="kbdtab">' + R2.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') + '</table><div class="row" style="margin-top:12px"><button class="btn" id="kbdclose">Schließen</button></div></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#kbdclose').onclick = () => ov.remove();
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  }
+  $('kbdhelp').onclick = help;
+  function focusField() {
+    const s = L.steps[state.cur];
+    let el = null;
+    if (s.type === 'gap') { const ins = [...document.querySelectorAll('.gapin')]; el = ins.find(i => !i.value) || ins[0]; }
+    else if (s.type === 'num') el = $('numin');
+    else if (s.type === 'calc') { const ins = [...document.querySelectorAll('[data-f]')]; el = ins.find(i => !i.value) || ins[0]; }
+    else if (!document.querySelector('main').classList.contains('solo')) el = ed;
+    if (el) { el.focus(); if (el === ed) { const n = ed.value.length; ed.setSelectionRange(n, n); } }
+  }
+  function primary() {
+    const s = L.steps[state.cur], S = st(state.cur);
+    if (!S.done) {
+      if (s.type === 'rf') return $('rfcheck').click();
+      if (s.type === 'calc') return $('calccheck').click();
+      if (s.type === 'code' || s.type === 'gap') return $('check').click();
+      if (s.type === 'num') return focusField();
+      if (s.type === 'mc') return;
+    }
+    $('next').click();
+  }
+  // Fangphase: Enter in einem Feld eines schon erledigten Schritts geht weiter, statt noch einmal zu prüfen.
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+    const a = document.activeElement;
+    if (!a || !(a.id === 'numin' || a.classList.contains('gapin') || a.hasAttribute('data-f'))) return;
+    if (!st(state.cur).done) return;
+    e.preventDefault(); e.stopPropagation(); a.blur(); $('next').click();
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+    const k = e.key, a = document.activeElement || {}, tag = a.tagName || '';
+    const inField = (tag === 'INPUT' && a.type !== 'checkbox' && a.type !== 'radio') || tag === 'TEXTAREA' || tag === 'SELECT';
+    const take = fn => { e.preventDefault(); fn(); };
+    // offene Fenster (Lektionsende, Verlauf, Session, Hub, Tastenkürzel)
+    const ov = [...document.querySelectorAll('.lock')].reverse().find(vis);
+    if (ov) {
+      if (k === 'Escape') { const c = ov.querySelector('#kbdclose, #lstay, #histclose, #sessclose, button[type=button]'); if (c) take(() => c.click()); else if (ov.id !== 'lock') take(() => ov.remove()); }
+      return;
+    }
+    // Abfrage „angeschaut?“
+    const toast = document.querySelector('.toast');
+    if (vis(toast)) {
+      const b = toast.querySelectorAll('button');
+      if (k === 'Enter' && b[0]) return take(() => b[0].click());
+      if (k === 'Escape' && b[1]) return take(() => b[1].click());
+      return;
+    }
+    if (!$('menu').hidden || !$('rtools').hidden) return;   // Esc schließt dort schon
+    // Feld „Nicht verstanden?“ / „Fehler melden“
+    const box = $('unkbox');
+    if (vis(box) && box.contains(a)) {
+      if (k === 'Escape') return take(() => { box.hidden = true; a.blur(); });
+      if (k === 'Enter' && !e.shiftKey && tag === 'TEXTAREA') { const b = $('unksave') || $('bugsave'); if (b) return take(() => b.click()); }
+      return;
+    }
+    if (inField) { if (k === 'Escape') take(() => a.blur()); return; }
+    if (k === '?') return take(help);
+    if (e.repeat && (k === 'Enter' || /^[0-9]$/.test(k))) return;
+    document.body.classList.add('kbd-on');
+    const s = L.steps[state.cur], S = st(state.cur);
+    const nav = d => take(() => { if (d > 0) $('next').click(); else if (!$('prev').disabled) $('prev').click(); });
+    if (e.shiftKey && (k === 'ArrowRight' || k === 'ArrowLeft')) return nav(k === 'ArrowRight' ? 1 : -1);
+    if (k === 'Escape') { if (vis(box)) return take(() => { box.hidden = true; }); return; }
+    const lk = k.length === 1 ? k.toLowerCase() : k;
+    if (lk === 'f') return take(() => $('bugbtn').click());
+    if (lk === 'u') return take(() => $('unkbtn').click());
+    if (lk === 'm') return take(() => { e.stopPropagation(); $('menubtn').click(); const f = $('menu').querySelector('.mitem.cur') || $('menu').querySelector('.mitem'); if (f) f.focus(); });
+    if (lk === 'e') return take(focusField);
+    if (lk === 'h') { const h1 = $('hint'), h2b = $('hint2btn'); if (h1 && h1.classList.contains('show') && h2b && h2b.style.display !== 'none') return take(() => h2b.click()); if ($('hintbtn')) return take(() => $('hintbtn').click()); return; }
+    // Richtig oder falsch, noch nicht ausgewertet: Pfeile beurteilen die gewählte Aussage
+    if (s.type === 'rf' && !S.done) {
+      const n = rows().length;
+      if (k === 'ArrowUp' || lk === 'w') return take(() => { rfFocus = Math.max(0, rfFocus - 1); rfMark(); rows()[rfFocus].scrollIntoView({ block: 'nearest' }); });
+      if (k === 'ArrowDown' || lk === 's') return take(() => { rfFocus = Math.min(n - 1, rfFocus + 1); rfMark(); rows()[rfFocus].scrollIntoView({ block: 'nearest' }); });
+      if (k === 'ArrowRight' || lk === 'd' || k === 'ArrowLeft' || lk === 'a') {
+        const v = (k === 'ArrowRight' || lk === 'd') ? '1' : '0';
+        return take(() => { const r = rows()[rfFocus]; const b = r && r.querySelector('.rfb[data-v="' + v + '"]'); if (b && !b.disabled) b.click(); const r2 = rows()[rfFocus]; if (r2) r2.scrollIntoView({ block: 'nearest' }); });
+      }
+    }
+    if (s.type === 'mc' && !S.done && /^[1-9]$/.test(k)) {
+      const b = [...document.querySelectorAll('#opts .opt')][+k - 1];
+      if (b && !b.disabled) take(() => b.click());
+      return;
+    }
+    if (k === 'Enter') {
+      if (/^(BUTTON|A|SUMMARY)$/.test(tag) || (tag === 'INPUT' && a.type === 'checkbox')) return;   // fokussierter Knopf: normal auslösen
+      return take(primary);
+    }
+    if (k === 'ArrowRight' || lk === 'd') return nav(1);
+    if (k === 'ArrowLeft' || lk === 'a') return nav(-1);
+  });
+  return { rfStart, rfAfter };
+})();
 
 Sess.init();
 render();
