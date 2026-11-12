@@ -1,0 +1,32 @@
+name: Lernkurs vertonen
+on:
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["kurs/vo/jobs.enc", "kurs-tools/vo-run.mjs", ".github/workflows/vertonung.yml"]
+permissions:
+  contents: write
+concurrency:
+  group: vertonung
+  cancel-in-progress: false
+jobs:
+  vertonen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node kurs-tools/vo-run.mjs
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      - name: Tonspuren speichern
+        run: |
+          git add -A kurs/vo
+          if git diff --cached --quiet; then echo "Keine Änderungen"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898299+github-actions[bot]@users.noreply.github.com" commit -q -m "Lernkurs: Tonspuren"
+          git pull --rebase -q origin main
+          git push
