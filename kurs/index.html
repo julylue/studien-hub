@@ -5928,30 +5928,31 @@ const Voice = (function () {
     $('vfill').style.width = '0%'; $('vtime').textContent = ''; status('Lädt …'); playing = true; ui(); media(s);
     let url = null; try { url = await loadRec(t); } catch (e) { url = null; }
     if (my !== token) { if (url) URL.revokeObjectURL(url); return; }
+    // Wurde während des Ladens pausiert (zweites V), nur vorbereiten, nicht abspielen
     if (url) {
       if (blobUrl) URL.revokeObjectURL(blobUrl); blobUrl = url;
       src = 'rec'; audio.src = url; audio.playbackRate = rate; try { audio.preservesPitch = true; } catch (e) {}
-      status('Vorlesen');
-      try { await audio.play(); } catch (e) { playing = false; status('Zum Starten tippen'); }
+      status(playing ? 'Vorlesen' : 'Pausiert');
+      if (playing) { try { await audio.play(); } catch (e) { playing = false; status('Zum Starten tippen'); } }
     } else {
-      src = 'dev'; dev = { chunks: chunksOf(t), i: 0 }; status('Gerätestimme (Aufnahme folgt)'); devSpeak();
+      src = 'dev'; dev = { chunks: chunksOf(t), i: 0 }; status('Gerätestimme (Aufnahme folgt)'); if (playing) devSpeak();
     }
     ui();
   }
   function pause() {
-    if (!playing) return; playing = false;
+    if (!playing) return; playing = false; if (!src) { status('Pausiert'); ui(); return; }
     if (src === 'rec') audio.pause(); else if (src === 'dev') { token++; try { speechSynthesis.cancel(); } catch (e) {} }
-    ui();
+    status('Pausiert'); ui();
   }
   function resume() {
     const s = L.steps[state.cur];
     if (!mode || curKey !== s.key || !src) return start(s);
     if (ended) { ended = false; if (src === 'rec') audio.currentTime = 0; else dev.i = 0; }
-    playing = true;
+    playing = true; status(src === 'dev' ? 'Gerätestimme (Aufnahme folgt)' : 'Vorlesen');
     if (src === 'rec') audio.play().catch(() => { playing = false; ui(); }); else devSpeak();
     ui();
   }
-  function toggle() { const s = L.steps[state.cur]; if (!SP[s.key]) return; if (!mode || curKey !== s.key) return start(s); playing ? pause() : resume(); }
+  function toggle() { const s = L.steps[state.cur]; if (!SP[s.key]) return; if (!mode || curKey !== s.key) return start(s); if (playing) pause(); else if (!src) { playing = true; start(s); } else resume(); }
   function close() { stopAll(); mode = false; ended = false; bar.hidden = true; src = null; ui(); }
 
   audio.addEventListener('timeupdate', ui);
@@ -6006,7 +6007,7 @@ const Keys = (function () {
       ['Enter', 'Hauptaktion: prüfen oder auswerten, ist der Schritt erledigt, weiter'],
       ['1 bis 9', 'Antwort bei Auswahlfragen wählen'],
       ['↑ ↓ (W S)', 'Richtig oder falsch: Aussage wählen, dann → richtig, ← falsch'],
-      ['E', 'In den Editor oder ins Eingabefeld springen'], ['Esc', 'Feld verlassen, danach gehen die Pfeile wieder; schließt auch Fenster und Menü'],
+      ['E', 'In den Editor oder ins erste freie Eingabefeld springen'], ['↑ ↓ oder Tab', 'Im Eingabefeld: zum nächsten oder vorherigen Feld'], ['Esc', 'Feld verlassen, danach gehen die Pfeile wieder; schließt auch Fenster und Menü'],
       ['Strg/Cmd + Enter', 'Im Editor: Code ausführen'], ['H', 'Hinweis zeigen (zweimal: zweiter Hinweis)'],
       ['U', 'Nicht verstanden? (für die Voice-Session merken)'], ['F', 'Fehler melden (im Feld: Enter sendet, Shift + Enter neue Zeile)'],
       ['V', 'Vorlesen starten oder pausieren'], ['M', 'Menü mit Lektionen und Kapiteln'], ['?', 'Diese Übersicht']
@@ -6017,6 +6018,7 @@ const Keys = (function () {
     ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   }
   $('kbdhelp').onclick = help;
+  function fields() { return [...document.querySelectorAll('.gapin, [data-f], #numin')].filter(x => x.offsetParent !== null && !x.disabled); }
   function focusField() {
     const s = L.steps[state.cur];
     let el = null;
@@ -6072,7 +6074,15 @@ const Keys = (function () {
       if (k === 'Enter' && !e.shiftKey && tag === 'TEXTAREA') { const b = $('unksave') || $('bugsave'); if (b) return take(() => b.click()); }
       return;
     }
-    if (inField) { if (k === 'Escape') take(() => a.blur()); return; }
+    if (inField) {
+      if (k === 'Escape') return take(() => a.blur());
+      // ↑ ↓ (und Tab / Shift + Tab) wechseln zwischen den Feldern einer Aufgabe
+      if ((k === 'ArrowDown' || k === 'ArrowUp') && (a.classList.contains('gapin') || a.hasAttribute('data-f') || a.id === 'numin')) {
+        const fs = fields(); const i = fs.indexOf(a);
+        if (fs.length > 1 && i >= 0) return take(() => { const n = fs[(i + (k === 'ArrowDown' ? 1 : -1) + fs.length) % fs.length]; n.focus(); try { n.setSelectionRange(n.value.length, n.value.length); } catch (x) {} });
+      }
+      return;
+    }
     if (k === '?') return take(help);
     if (e.repeat && (k === 'Enter' || /^[0-9]$/.test(k))) return;
     document.body.classList.add('kbd-on');
