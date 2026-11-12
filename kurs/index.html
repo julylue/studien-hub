@@ -445,6 +445,28 @@ main.solo.wide + .nav .vbar{max-width:900px}
 .vclose{flex:none;width:30px;height:30px;border:none;background:none;color:var(--dim);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .vclose:hover{color:var(--text)}
 @media (max-width:640px){ .vbtn .vlabel{display:none} .vbtn{margin-left:6px;padding:4px} .vbar{gap:8px;margin-bottom:8px} }
+
+/* Kopfzeile eines Schritts: Label links, Werkzeuge rechts, alle im gleichen Stil (12.11.) */
+.kicker{display:flex!important;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.klabel{display:inline-flex;align-items:center;gap:8px}
+.stools{display:flex;align-items:center;gap:6px;margin-left:auto}
+.tool{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px 0 10px;margin:0;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--muted);font:inherit;font-size:13px;line-height:1;cursor:pointer;text-transform:none;letter-spacing:0;transition:color .15s,border-color .15s,background .15s}
+.tool:hover{color:var(--text);border-color:var(--muted)}
+.tool:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tool svg{flex:none}
+.tool.on{color:var(--text);border-color:var(--accent);background:var(--okbg)}
+.tool.on.unk{color:#e3c47a;border-color:#6b5a33;background:#332d22}
+@media (max-width:640px){ .tool .tl{display:none} .tool{width:36px;height:36px;padding:0;justify-content:center} .stools{gap:8px} }
+/* Antwortnummern */
+.opt{display:flex;align-items:flex-start;gap:12px}
+.okey{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;margin:0;border:1px solid var(--line);border-radius:7px;font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg)}
+.otx{flex:1;min-width:0}
+.opt.sel-ok .okey{border-color:var(--accent);color:var(--accent)}
+.opt.sel-bad .okey{border-color:var(--err);color:var(--err)}
+/* Fußzeile: Tastatur-Knopf neben der Schrittzahl */
+.navmid{flex-direction:row!important;gap:10px!important}
+.kbdhelp{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--line);border-radius:999px;background:none;color:var(--dim);cursor:pointer;text-decoration:none;padding:0}
+.kbdhelp:hover{color:var(--text);border-color:var(--muted)}
 </style>
 </head>
 <body>
@@ -507,7 +529,7 @@ try { if (localStorage.getItem('lernkurs:pw')) { document.getElementById('lockfo
     <div class="vbar" id="vbar" hidden></div>
     <div class="navin">
       <button class="btn ghost" id="prev">Zurück</button>
-      <span class="navmid"><span class="pos" id="pos"></span><button class="kbdhelp desk-only" id="kbdhelp" type="button" title="Alle Tastenkürzel">Tastatur: ← → blättern · ? alle Tasten</button></span>
+      <span class="navmid"><span class="pos" id="pos"></span><button class="kbdhelp desk-only" id="kbdhelp" type="button" title="Tastenkürzel (Taste ?)" aria-label="Tastenkürzel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M8 14h8"/></svg></button></span>
       <button class="btn primary" id="next">Weiter</button>
     </div>
   </footer>
@@ -5651,7 +5673,13 @@ function render() {
   const part = L.parts.find(p => p.id === s.part);
   if (s.type === 'info' || s.type === 'video') S.done = true;
   const uid = L.id + '|' + (s.key || state.cur), un = window.Unklar.get(uid);
-  let h = '<p class="kicker"><span>' + esc(s.label) + (S.done && s.type !== 'info' && s.type !== 'video' ? '<span class="done-mark">erledigt</span>' : '') + '</span>' + Voice.button(s) + '<button class="unkbtn' + (un ? ' on' : '') + '" id="unkbtn" title="Für eine Voice-Session vormerken">' + (un ? 'Als unklar gemerkt' : 'Nicht verstanden?') + '</button><button class="unkbtn bugbtn" id="bugbtn" title="Fehler in diesem Schritt melden">Fehler melden</button></p><div id="unkbox" hidden></div>';
+  const TI = {
+    unk: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.8"/><path d="M12 17.2h.01"/></svg>',
+    bug: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>'
+  };
+  let h = '<div class="kicker"><span class="klabel">' + esc(s.label) + (S.done && s.type !== 'info' && s.type !== 'video' ? '<span class="done-mark">erledigt</span>' : '') + '</span><div class="stools">' + Voice.button(s)
+    + '<button class="tool' + (un ? ' on unk' : '') + '" id="unkbtn" type="button" title="Für eine Voice-Session vormerken (Taste U)" aria-label="' + (un ? 'Als unklar gemerkt' : 'Nicht verstanden') + '">' + TI.unk + '<span class="tl">' + (un ? 'Als unklar gemerkt' : 'Nicht verstanden') + '</span></button>'
+    + '<button class="tool" id="bugbtn" type="button" title="Fehler in diesem Schritt melden (Taste F)" aria-label="Fehler melden">' + TI.bug + '<span class="tl">Fehler melden</span></button></div></div><div id="unkbox" hidden></div>';
   h += '<h2>' + s.title + '</h2>' + (s.body || '');
   if (s.media && s.media.length) {
     h += '<div class="media"><div class="mlabel">Dazu ansehen (öffnet einen neuen Tab)</div>' + s.media.map(m => { const w = Watch.get(m.url); return '<div class="mrow"><label class="mchk" title="Angeschaut abhaken"><input type="checkbox" class="mwatch" data-url="' + m.url + '" data-title="' + esc(m.title) + '"' + (w ? ' checked' : '') + '></label><a class="mcard vlink" data-url="' + m.url + '" data-cap="' + mediaCap(m) + '" data-title="' + esc(m.title) + '" href="' + m.url + '" target="_blank" rel="noopener"><span class="msrc">' + SRC[m.src] + '</span><span class="mtitle">' + esc(m.title) + '</span>' + (m.dur ? '<span class="mdur">' + m.dur + ' Min.</span>' : '') + '<span class="mstate">' + (w ? 'angeschaut' + (w.min ? ', ' + w.min + ' Min.' : '') : '') + '</span></a></div>'; }).join('') + '</div>';
@@ -5671,28 +5699,24 @@ function render() {
   }
   if (s.type === 'mc') {
     S.order = mcOrder(s);   // feste Reihenfolge, gleich wie in der Aufnahme
-    h += '<div class="opts" id="opts">' + S.order.map((k, n) => '<button class="opt" data-k="' + k + '">' + (n < 9 ? '<span class="okey">' + (n + 1) + '</span>' : '') + s.options[k].t + '</button>').join('') + '</div>';
-    if (!S.done) h += '<p class="khint desk-only">Tastatur: 1 bis ' + Math.min(9, s.options.length) + ' wählt eine Antwort.</p>';
+    h += '<div class="opts" id="opts">' + S.order.map((k, n) => '<button class="opt" data-k="' + k + '">' + (n < 9 ? '<span class="okey" aria-hidden="true">' + (n + 1) + '</span>' : '') + '<span class="otx">' + s.options[k].t + '</span></button>').join('') + '</div>';
   }
   if (s.type === 'rf') {
     S.rf = S.rf || [];
     h += '<div class="rflist">' + s.statements.map((a, k) => '<div class="rfrow" data-rf="' + k + '"><div class="rft"><span class="rfl">' + 'ABCDE'[k] + '</span><span class="rftx">' + a.t + '</span></div><div class="rfbtns"><button class="rfb' + (S.rf[k] === true ? ' sel' : '') + '" data-v="1">Richtig</button><button class="rfb' + (S.rf[k] === false ? ' sel' : '') + '" data-v="0">Falsch</button></div><div class="rfwhy"></div></div>').join('') + '</div>';
     h += '<div class="row"><button class="btn primary" id="rfcheck">Auswerten</button></div>';
-    if (!S.done) h += '<p class="khint desk-only">Tastatur: ↑ ↓ wählt die Aussage, → richtig, ← falsch, Enter wertet aus.</p>';
     if (s.source) h += '<p class="src">Quelle: ' + esc(s.source) + '</p>';
   }
   if (s.type === 'calc') {
     S.vals = S.vals || [];
     h += '<div class="task"><div class="tlabel">Deine Aufgabe</div>' + s.task + '<div class="fields">' + s.fields.map((f, k) => '<label class="field"><span class="flabel">' + f.label + '</span><input class="numin" data-f="' + k + '" inputmode="decimal" autocomplete="off" value="' + esc(S.vals[k] || '') + '"><span class="fmark" data-fm="' + k + '"></span></label>').join('') + '</div>';
     h += '<div class="row" style="margin-top:10px"><button class="btn primary" id="calccheck">Prüfen</button><button class="btn link" id="hintbtn">Hinweis zeigen</button></div><div class="hintbox" id="hint">' + s.hint + '</div></div>';
-    h += '<p class="khint desk-only">Tastatur: E springt ins erste Feld, Tab zum nächsten, Enter prüft, Esc verlässt das Feld, H zeigt einen Hinweis.</p>';
   }
   if (s.type === 'code' || s.type === 'num' || s.type === 'gap') {
     h += '<div class="task"><div class="tlabel">Deine Aufgabe</div>' + s.task;
     if (s.type === 'num') h += '<div class="row" style="margin-top:10px"><input class="numin" id="numin" inputmode="decimal" placeholder="Antwort" autocomplete="off"><button class="btn primary" id="numcheck">Antwort prüfen</button></div>';
     h += '<div class="row" style="margin-top:6px;gap:20px"><button class="btn link" id="hintbtn">Hinweis zeigen</button>' + (s.hint2 ? '<button class="btn link" id="hint2btn" style="display:none">Zweiter Hinweis</button>' : '') + (s.solution ? '<button class="btn link" id="solbtn" style="display:none">Lösung zeigen</button>' : '') + '</div>';
     h += '<div class="hintbox" id="hint">' + s.hint + '</div>' + (s.hint2 ? '<div class="hintbox" id="hint2">' + s.hint2 + '</div>' : '') + '</div>';
-    h += '<p class="khint desk-only">Tastatur: E springt ' + (s.type === 'code' ? 'in den Editor' : 'ins Eingabefeld') + ', Enter prüft' + (s.type === 'code' ? ' (im Editor Strg/Cmd + Enter führt aus)' : '') + ', Esc verlässt das Feld, H zeigt einen Hinweis.</p>';
   }
   h += '<div class="fb" id="fb"></div>';
   $('stepview').innerHTML = h;
@@ -5950,7 +5974,7 @@ const Voice = (function () {
   };
   window.addEventListener('pagehide', stopAll);
   return {
-    button(s) { return SP[s.key] ? '<button class="vbtn' + (mode ? ' on' : '') + '" id="vbtn" type="button" title="Vorlesen (Taste V)" onclick="window.__voiceToggle()">' + ICON.spk + '<span class="vlabel">Vorlesen</span></button>' : ''; },
+    button(s) { return SP[s.key] ? '<button class="tool' + (mode ? ' on' : '') + '" id="vbtn" type="button" title="Vorlesen (Taste V)" aria-label="Vorlesen" onclick="window.__voiceToggle()">' + ICON.spk + '<span class="tl">Vorlesen</span></button>' : ''; },
     onRender(s) {
       if (s.key === lastKey) return; lastKey = s.key;
       if (!mode) return;
