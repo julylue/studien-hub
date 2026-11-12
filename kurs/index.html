@@ -428,7 +428,8 @@ header .brand{min-width:0}
 </style>
 </head>
 <body>
-<div class="lock" id="lock"><form class="lockbox" id="lockform"><h3>Lernkurs</h3><p>Passwort eingeben. Es wird in diesem Browser gespeichert, danach musst du es nicht mehr eingeben.</p><input class="numin" id="lockpw" type="password" autocomplete="current-password" placeholder="Passwort"><div class="lockerr" id="lockerr"></div><button class="btn primary" type="submit">Öffnen</button></form></div>
+<div class="lock" id="lock"><form class="lockbox" id="lockform"><h3>Lernkurs</h3><p>Passwort eingeben. Es wird in diesem Browser gespeichert, danach musst du es nicht mehr eingeben.</p><input class="numin" id="lockpw" type="password" autocomplete="current-password" placeholder="Passwort"><div class="lockerr" id="lockerr"></div><button class="btn primary" type="submit">Öffnen</button></form></div><script>// Gespeichertes Passwort: Abfrage gar nicht erst zeigen, nur bei Fehlschlag
+try { if (localStorage.getItem('lernkurs:pw')) { document.getElementById('lockform').style.visibility = 'hidden'; } } catch (e) {}</script>
 <div class="app">
   <header>
     <div class="brand"><span id="brand"></span><span class="chap" id="chap"></span></div>
@@ -5913,7 +5914,7 @@ window.PAYLOAD = {"salt":"+seCes1HDFC2AgT62P+DGg==","iv":"8ag2dfnFlCF5qIqX","ite
     window.bootCourse(obj);
   }
   let saved = null; try { saved = localStorage.getItem('lernkurs:pw'); } catch (e) {}
-  if (saved) tryOpen(saved).catch(() => { try { localStorage.removeItem('lernkurs:pw'); } catch (e) {} });
+  if (saved) tryOpen(saved).catch(() => { try { localStorage.removeItem('lernkurs:pw'); } catch (e) {} document.getElementById('lockform').style.visibility = ''; });
   document.getElementById('lockform').addEventListener('submit', async e => {
     e.preventDefault();
     const pw = document.getElementById('lockpw').value;
