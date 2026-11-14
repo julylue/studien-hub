@@ -5348,7 +5348,13 @@ function hookVideo(s, S) {
   if (s.video.kind === 'youtube') {
     loadYT().then(YT => {
       if (!$('vidframe')) return;
-      new YT.Player('vidframe', { events: { onStateChange: e => {
+      /* VIDEO-TEMPO: Standard 2x, eigene Wahl im Player wird gemerkt (lernkurs:ytrate) */
+      const ytRate = () => { let r = 2; try { r = parseFloat(localStorage.getItem('lernkurs:ytrate')) || 2; } catch (e) {} return r; };
+      let rateSet = false;
+      new YT.Player('vidframe', { events: { onReady: e => { try { e.target.setPlaybackRate(ytRate()); } catch (x) {} },
+      onPlaybackRateChange: e => { if (rateSet) { try { localStorage.setItem('lernkurs:ytrate', String(e.data)); } catch (x) {} } },
+      onStateChange: e => {
+        if (e.data === 1 && !rateSet) { rateSet = true; try { if (e.target.getPlaybackRate() !== ytRate()) e.target.setPlaybackRate(ytRate()); } catch (x) {} }
         if (e.data === 1) { Sess.watching = true; Sess.touch(); if (!S.watched) setWatched(S, true, true); }
         else if (e.data === 0 || e.data === 2) { Sess.watching = false; Sess.touch(); }
       } } });
