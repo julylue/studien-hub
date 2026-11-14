@@ -1,4 +1,5 @@
-// Gast-Paket neu bauen: node kurs-tools/guest-payload.js kurs/index.html "<eigenes Passwort>" "<Gast-Passwort>" [gastMail]
+// Gast-Paket neu bauen: node kurs-tools/guest-payload.js kurs/index.html "<eigenes Passwort>" "<Gast-Passwort>" ["<formResponse-URL>|entry.<id>"]
+// Das vierte Argument (Feld guestMail) ist das Google-Formular für Fehlermeldungen von Gästen; weglassen = bisheriges behalten.
 // Entschlüsselt window.PAYLOAD, setzt guest:true (+ guestMail) und schreibt window.PAYLOAD_GUEST mit neuem Salz/IV.
 // Nach JEDER Änderung an PAYLOAD (neue Lektionen, build-voice.js) ausführen, sonst sehen Gäste den alten Stand.
 const fs = require('fs'), crypto = require('crypto');
