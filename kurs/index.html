@@ -387,6 +387,21 @@ header .brand{min-width:0}
 .syncwait{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:var(--bg,#1d1c1a);color:var(--muted,#b5ad9f);font-size:17px;z-index:50}
 .unkbtn{margin-left:auto;background:none;border:none;padding:2px 4px;font:inherit;font-size:13px;color:var(--muted);opacity:.7;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-transform:none;letter-spacing:0}
 /* GUEST-MODUS */ body.guest #sessbar,body.guest #sessmenu,body.guest #hubconnect,body.guest #unkbtn,body.guest #unkbox,body.guest .kbd-u,body.nomail #bugbtn,body.nomail .kbd-f{display:none!important}
+/* SPENDE-MODUL */
+#donbtn{display:none}
+body.guest #donbtn{display:inline-flex;margin-right:8px}
+body.guest #mdonate{display:block}
+#mdonate,#mlogout{display:none}
+body.guest #mlogout{display:block}
+.donov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
+.donbox{width:min(460px,94vw);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px}
+.donbox h3{margin:0 0 10px}
+.donbox p{margin:0 0 10px;line-height:1.55}
+.donbox .dim{color:var(--muted);font-size:13.5px}
+.donbox .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.donbox a.btn{text-decoration:none}
+.donnote{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.donnote p{margin:0 0 8px;line-height:1.5}
 .unkbtn:hover{opacity:1;color:var(--text)}
 .bugbtn{margin-left:4px}
 .bugg{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
@@ -477,6 +492,7 @@ try { if (localStorage.getItem('lernkurs:pw')) { document.getElementById('lockfo
   <header>
     <div class="brand"><span id="brand"></span><span class="chap" id="chap"></span></div>
     <div class="sess" id="sessbar"></div>
+    <button class="tool donbtn" id="donbtn" type="button" title="Den Kurs mit einem kleinen Beitrag unterstützen" aria-label="Kurs unterstützen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><span class="tl">Unterstützen</span></button>
     <div class="menuwrap">
       <button class="iconbtn" id="menubtn" aria-label="Kapitel und Einstellungen" aria-expanded="false" aria-controls="menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       <div class="menu" id="menu" hidden>
@@ -488,6 +504,8 @@ try { if (localStorage.getItem('lernkurs:pw')) { document.getElementById('lockfo
         <div class="msep"></div>
         <div id="sessmenu"></div>
         <button class="mitem" id="hubconnect">Mit Hub verbinden</button>
+        <button class="mitem" id="mdonate">Kurs unterstützen</button>
+        <button class="mitem" id="mlogout">Abmelden (anderes Passwort)</button>
         <button class="mitem" id="showdata">Datensatz ansehen</button>
         <button class="mitem danger" id="restart">Lektion neu beginnen</button>
       </div>
@@ -4950,7 +4968,8 @@ function lessonDone(l) {
 }
 window.lessonDone = lessonDone;
 window.bootCourse = function (course) {
-  window.GUEST = !!course.guest; window.GUEST_MAIL = course.guestMail || ''; if (window.GUEST) { document.body.classList.add('guest'); if (!window.GUEST_MAIL) document.body.classList.add('nomail'); }
+  window.GUEST = !!course.guest; window.GUEST_MAIL = course.guestMail || ''; if (window.GUEST && !window.__gstore) { /* GAST-SPEICHER: eigener Bereich im Browser-Speicher, damit sich Gast- und eigener Stand nie mischen */ window.__gstore = true; const S = Storage.prototype, g = S.getItem, s = S.setItem, r = S.removeItem, keep = k => k === 'lernkurs:pw'; S.getItem = function (k) { return this === localStorage && !keep(k) ? g.call(this, 'gast:' + k) : g.call(this, k); }; S.setItem = function (k, v) { return this === localStorage && !keep(k) ? s.call(this, 'gast:' + k, v) : s.call(this, k, v); }; S.removeItem = function (k) { return this === localStorage && !keep(k) ? r.call(this, 'gast:' + k) : r.call(this, k); }; }
+  if (window.GUEST) { document.body.classList.add('guest'); if (!window.GUEST_MAIL) document.body.classList.add('nomail'); }
   try { const k = new URLSearchParams(location.search).get('k'); if (k) { localStorage.setItem('hub-key', k); history.replaceState(null, '', location.pathname); } } catch (e) {}
   window.COURSE = course; window.DATA = course.data || {};
   if (!window.__cloudDone) {
@@ -5814,7 +5833,7 @@ function lessonEndDialog() {
   let h = '<div class="lockbox" style="width:min(520px,92vw)">';
   if (open.length) {
     h += '<h3>Noch ' + open.length + (open.length === 1 ? ' Aufgabe' : ' Aufgaben') + ' offen</h3><p>Die hast du übersprungen. Du kannst sie jetzt machen oder trotzdem weitergehen.</p><ul class="openlist">' + open.slice(0, 8).map(([x, i]) => { const ci = L.parts.findIndex(p => p.id === x.part); return '<li><button class="btn link" data-go="' + i + '">Kapitel ' + (ci + 1) + ': ' + esc(x.title || '') + '</button></li>'; }).join('') + '</ul>' + (open.length > 8 ? '<p class="dim">und ' + (open.length - 8) + ' weitere</p>' : '');
-  } else h += '<h3>Lektion ' + L.nr + ' geschafft</h3><p>Alle Aufgaben sind erledigt.</p>';
+  } else h += '<h3>Lektion ' + L.nr + ' geschafft</h3><p>Alle Aufgaben sind erledigt.</p>' + Don.lessonNote(L.id);
   h += '<div class="row" style="margin-top:12px;flex-wrap:wrap">' + (next ? '<button class="btn primary" id="lnext">Weiter mit Lektion ' + next.nr + '</button>' : '') + '<button class="btn" id="lstay">Hier bleiben</button></div></div>';
   ov.innerHTML = h; document.body.appendChild(ov);
   ov.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { ov.remove(); go(+b.dataset.go); });
@@ -6127,6 +6146,60 @@ const Keys = (function () {
   return { rfStart, rfAfter };
 })();
 
+// ---------- Spende (nur Gastmodus) ----------
+const Don = (function () {
+  const URL = 'https://www.paypal.me/julylue', K = 'lernkurs:don', FIRST_AFTER = 20, EXIT_AFTER = 5;
+  const get = () => { try { return JSON.parse(localStorage.getItem(K) || '{}'); } catch (e) { return {}; } };
+  const put = o => { try { localStorage.setItem(K, JSON.stringify(o)); } catch (e) {} };
+  const TEXT = '<p>Ich bin July und studiere selbst Psychologie an der FernUni. Diesen Kurs baue ich eigentlich für mein eigenes Lernen und teile ihn gern mit dir.</p>'
+    + '<p>Jede Lektion entsteht mit Claude, einer KI, die ich privat bezahle. Wenn dir der Kurs beim Lernen hilft, freue ich mich sehr über einen kleinen Beitrag per PayPal. Damit kann ich Claude weiter finanzieren und die nächsten Kapitel hochladen.</p>'
+    + '<p class="dim">Ganz freiwillig: Der Kurs bleibt für dich auch ohne Beitrag komplett nutzbar.</p>';
+  const busy = () => !!document.querySelector('.lock, .donov');
+  function show(force) {
+    if (!window.GUEST) return;
+    const s = get(); if (!force && (s.never || busy())) return;
+    if (document.querySelector('.donov')) return;
+    s.shown = (s.shown || 0) + 1; s.last = Date.now(); put(s);
+    const ov = document.createElement('div'); ov.className = 'donov';
+    ov.innerHTML = '<div class="donbox" role="dialog" aria-modal="true" aria-labelledby="donh"><h3 id="donh">Hilft dir der Kurs?</h3>' + TEXT
+      + '<div class="row"><a class="btn primary" id="donpay" href="' + URL + '" target="_blank" rel="noopener">Per PayPal unterstützen</a><button class="btn" id="donlater" type="button">Später</button>'
+      + (force ? '' : '<button class="btn link" id="donnever" type="button">Nicht mehr anzeigen</button>') + '</div></div>';
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    $('donlater').onclick = close;
+    $('donpay').onclick = () => { const o = get(); o.paid = Date.now(); put(o); setTimeout(close, 300); };
+    if ($('donnever')) $('donnever').onclick = () => { const o = get(); o.never = true; put(o); close(); };
+    ov.addEventListener('click', e => { if (e.target === ov) close(); });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape' && document.body.contains(ov)) { e.stopPropagation(); close(); document.removeEventListener('keydown', esc, true); } }, true);
+    setTimeout(() => { const b = $('donpay'); if (b) b.focus(); }, 30);
+  }
+  // nach einigen erledigten Schritten einmal
+  function tick() {
+    if (!window.GUEST) return;
+    const s = get(); s.n = (s.n || 0) + 1; put(s);
+    if (!s.shown && s.n >= FIRST_AFTER) setTimeout(() => show(false), 900);
+  }
+  // beim Verlassen (Maus verlässt das Fenster oben, nur am Rechner) einmal
+  document.addEventListener('mouseout', e => {
+    if (!window.GUEST || e.relatedTarget || e.clientY > 0) return;
+    const s = get(); if (s.shown || (s.n || 0) < EXIT_AFTER) return;
+    show(false);
+  });
+  // Hinweis im Abschluss einer Lektion (einmal je Lektion)
+  function lessonNote(id) {
+    if (!window.GUEST) return '';
+    const s = get(); if (s.never || s.paid) return '';
+    s.lessons = s.lessons || []; if (s.lessons.includes(id)) return '';
+    s.lessons.push(id); s.shown = (s.shown || 0) + 1; put(s);
+    return '<div class="donnote">' + TEXT + '<div class="row" style="margin-top:4px"><a class="btn" href="' + URL + '" target="_blank" rel="noopener">Per PayPal unterstützen</a></div></div>';
+  }
+  return { show, tick, lessonNote };
+})();
+window.Don = Don;
+$('donbtn').onclick = () => Don.show(true);
+$('mdonate').onclick = () => { closeMenus(); Don.show(true); };
+$('mlogout').onclick = () => { try { localStorage.removeItem('lernkurs:pw'); } catch (e) {} location.reload(); };
+{ const _sd = Sess.stepDone; Sess.stepDone = function () { Don.tick(); return _sd.apply(this, arguments); }; }
 Sess.init();
 render();
 };
