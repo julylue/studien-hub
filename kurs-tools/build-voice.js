@@ -15,7 +15,9 @@ const ROOT = path.join(__dirname, '..');
 const HTML = path.join(ROOT, 'kurs', 'index.html');
 const VO = path.join(ROOT, 'kurs', 'vo');
 const PW = process.env.KURS_PW, EK = process.env.ELEVEN_KEY;
-if (!PW || !EK) { console.error('KURS_PW und ELEVEN_KEY setzen'); process.exit(1); }
+// ELEVEN_KEY ist optional (seit 16.11.2026 vertont ElevenLabs den Kurs nicht mehr): ohne Schlüssel werden nur die
+// Sprechtexte erneuert, jobs.enc bleibt unverändert. Danach build-thorsten.py für die freie Stimme ausführen.
+if (!PW) { console.error('KURS_PW setzen'); process.exit(1); }
 
 const VOICE = { voice: 'Max', voiceId: process.env.VOICE_ID || '', model: 'eleven_flash_v2_5', fmt: 'mp3_44100_32' };
 
@@ -74,12 +76,14 @@ const newP = encryptPayload(obj, PW, P.iter);
 html = html.replace(m[0], 'window.PAYLOAD = ' + JSON.stringify(newP) + ';\n');
 fs.writeFileSync(HTML, html);
 
+if (EK) {
 fs.mkdirSync(VO, { recursive: true });
 const jk = crypto.createHash('sha256').update(EK).digest();
 const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', jk, iv);
 const plain = JSON.stringify({ key: audioKey, voiceId: VOICE.voiceId, model: VOICE.model, fmt: VOICE.fmt, items: jobs });
 const ct = Buffer.concat([c.update(Buffer.from(plain, 'utf8')), c.final(), c.getAuthTag()]);
 fs.writeFileSync(path.join(VO, 'jobs.enc'), JSON.stringify({ iv: iv.toString('base64'), data: ct.toString('base64') }) + '\n');
+}
 
 const chars = jobs.reduce((a, j) => a + j.t.length, 0);
 console.log('Schritte mit Sprechtext:', Object.keys(items).length, '· Aufträge:', jobs.length, '· Zeichen:', chars);

@@ -1,11 +1,9 @@
 name: Lernkurs vertonen
+# Seit 16.11.2026 gestoppt (Julys Entscheidung): ElevenLabs-Credits bleiben für die Karten-App. Die vorhandenen
+# Max-Aufnahmen bleiben im Kurs wählbar. Neue Lektionen werden kostenlos mit Thorsten vertont (kurs-tools/build-thorsten.py).
+# Nur noch manuell startbar.
 on:
-  schedule:
-    - cron: "23 2 * * *"
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ["kurs/vo/jobs.enc", "kurs-tools/vo-run.mjs", ".github/workflows/vertonung.yml"]
 permissions:
   contents: write
 concurrency:
