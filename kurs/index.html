@@ -5169,7 +5169,8 @@ function lessonMenu() {
   const box = $('lessons'); if (!box || !window.COURSE) return;
   box.innerHTML = '';
   let sprintHead = false;
-  window.COURSE.lessons.forEach(l => {
+  const all = window.COURSE.lessons;
+  all.filter(l => !l.sprint).concat(all.filter(l => l.sprint)).forEach(l => {
     if (l.sprint && !sprintHead) { sprintHead = true; const sp = document.createElement('div'); sp.className = 'msep'; box.appendChild(sp); const hd = document.createElement('div'); hd.className = 'mhead'; hd.textContent = 'Abkürzungen fürs Quiz'; box.appendChild(hd); }
     const b = document.createElement('button'); b.className = 'mitem lesson' + (l.id === L.id ? ' cur' : '');
     let stx = null; try { stx = JSON.parse(localStorage.getItem('rkurs:' + l.id) || 'null'); } catch (e) {}
