@@ -9,4 +9,4 @@ const dc = crypto.createDecipheriv('aes-256-gcm', k, Buffer.from(P.iv, 'base64')
 const o = JSON.parse(Buffer.concat([dc.update(d.slice(0, -16)), dc.final()]).toString('utf8'));
 const items = [];
 o.lessons.slice().sort((a, b) => a.nr - b.nr).forEach(l => l.steps.forEach(s => { const t = o.speech && o.speech[l.id] && o.speech[l.id][s.key]; if (t) items.push({ lesson: l.id, step: s.key, t }); }));
-process.stdout.write(JSON.stringify({ key: o.voice.key, items }));
+process.stdout.write(JSON.stringify({ key: o.voice.key, voice: { voiceId: o.voice.voiceId, model: o.voice.model, fmt: o.voice.fmt }, items }));

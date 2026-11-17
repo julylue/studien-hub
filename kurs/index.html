@@ -6173,6 +6173,8 @@ const Voice = (function () {
     const R = REC[stimme];
     if (!R || !V || !window.crypto || !crypto.subtle) return null;
     const h = await hashOf(R.id, t); const m = await manifest(R.dir); if (!m.has(h)) return null;
+    // Wortzeiten aus der Spracherkennung (kurs-tools/build-timing.py), falls vorhanden
+    recTm = fetch(R.dir + h + '.tm.json').then(r => r.ok ? r.json() : null).catch(() => null);
     const r = await fetch(R.dir + h + '.bin'); if (!r.ok) return null;
     const buf = new Uint8Array(await r.arrayBuffer());
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, await aesKey(), buf.slice(12));
@@ -6287,7 +6289,7 @@ const Voice = (function () {
   async function start(s) {
     const t = SP[s.key]; if (!t) return;
     stopAll(); const my = token;
-    mode = true; ended = false; curKey = s.key; bar.hidden = false; src = null; recPlan = null; Follow.prepare(t);
+    mode = true; ended = false; curKey = s.key; bar.hidden = false; src = null; recPlan = null; recAn = null; recExact = false; recTm = null; Follow.prepare(t);
     $('vfill').style.width = '0%'; $('vtime').textContent = ''; status('Lädt …'); playing = true; ui(); media(s);
     let url = null; try { url = await loadRec(t); } catch (e) { url = null; }
     if (my !== token) { if (url) URL.revokeObjectURL(url); return; }
@@ -6295,8 +6297,12 @@ const Voice = (function () {
     if (url) {
       if (blobUrl) URL.revokeObjectURL(blobUrl); blobUrl = url;
       src = 'rec'; audio.src = url; audio.playbackRate = rate; try { audio.preservesPitch = true; } catch (e) {}
-      // Zeitplan fürs Mitlesen: sofort grob, nach dem Auswerten der Pausen genauer
-      if (Follow.ok) Follow.pauses(url).then(a => { if (my === token && a) recAn = a, recPlan = Follow.plan(audio.duration || a.end, a); }).catch(() => {});
+      // Zeitplan fürs Mitlesen: Wortzeiten aus der Spracherkennung; fehlen sie, grob nach Wortlänge und dann an den Pausen ausgerichtet
+      if (Follow.ok) (recTm || Promise.resolve(null)).then(tm => {
+        if (my !== token) return;
+        if (tm && tm.n === Follow.count() && Array.isArray(tm.t)) { recExact = true; recPlan = tm.t.map(x => x / 100 - 0.05); recWord(); return; }
+        return Follow.pauses(url).then(a => { if (my === token && a && !recExact) recAn = a, recPlan = Follow.plan(audio.duration || a.end, a); });
+      }).catch(() => {});
       status(playing ? recLabel() : 'Pausiert');
       if (playing) { try { await audio.play(); } catch (e) { playing = false; status('Zum Starten tippen'); } }
     } else {
@@ -6321,7 +6327,7 @@ const Voice = (function () {
   function close() { stopAll(); mode = false; ended = false; bar.hidden = true; src = null; Follow.clear(); ui(); }
 
   // Mitlesen bei Aufnahmen: Wort zur aktuellen Abspielzeit
-  let recPlan = null, recAn = null, raf = 0;
+  let recPlan = null, recAn = null, recExact = false, recTm = null, raf = 0;
   function recWord() {
     if (src !== 'rec' || !recPlan) return; const t = audio.currentTime || 0;
     let lo = 0, hi = recPlan.length - 1, r = 0; while (lo <= hi) { const m = (lo + hi) >> 1; if (recPlan[m] <= t) { r = m; lo = m + 1; } else hi = m - 1; }
@@ -6329,7 +6335,7 @@ const Voice = (function () {
   }
   function loop() { raf = 0; recWord(); if (src === 'rec' && playing) raf = requestAnimationFrame(loop); }
   audio.addEventListener('timeupdate', ui);
-  audio.addEventListener('loadedmetadata', () => { if (src === 'rec' && !recPlan) recPlan = Follow.plan(audio.duration, recAn); ui(); });
+  audio.addEventListener('loadedmetadata', () => { if (src === 'rec' && !recPlan && !recExact) recPlan = Follow.plan(audio.duration, recAn); ui(); });
   audio.addEventListener('seeked', recWord);
   audio.addEventListener('playing', () => { if (!raf) raf = requestAnimationFrame(loop); });
   audio.addEventListener('ended', () => { playing = false; ended = true; status('Fertig'); ui(); });
