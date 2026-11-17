@@ -442,6 +442,8 @@ body.guest #mlogout{display:block}
 .kbdtab td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .kbdtab td:first-child{white-space:nowrap;font-family:var(--mono);font-size:13px;color:var(--amber);width:1%}
 
+/* Mitlesen (17.11.2026): das Wort, das gerade vorgelesen wird */
+::highlight(vword){background-color:rgba(217,168,92,.4);color:var(--text)}
 /* Vorlesen: Knopf in der Kopfzeile, schmale Leiste über Zurück/Weiter */
 .vbtn{display:inline-flex;align-items:center;gap:5px;background:none;border:none;padding:2px 4px;margin-left:10px;font:inherit;font-size:13px;color:var(--muted);opacity:.75;cursor:pointer;text-transform:none;letter-spacing:0}
 .vbtn:hover,.vbtn.on{opacity:1;color:var(--text)}
@@ -5998,6 +6000,125 @@ function mcOrder(s) {
   return o;
 }
 
+// ---------- Mitlesen beim Vorlesen (Julys Wunsch 17.11.2026) ----------
+// Markiert das Wort, das gerade vorgelesen wird, damit man dem Vorlesen folgen kann.
+// Sprechtext (C.speech) und Bildschirmtext unterscheiden sich (Formeln, R-Code, Abkürzungen werden ausgesprochen):
+// Wörter werden deshalb abgeglichen; gesprochene Wörter ohne Gegenstück (z. B. "x quer") markieren die Stelle dazwischen (die Formel).
+// Zeit: Gerätestimme und Seraphina melden jedes Wort selbst (boundary), sonst Schätzung je Satzstück.
+// Aufnahmen (Thorsten, Max): Pausen in der Tonspur werden gesucht und auf die Satzenden gelegt, dazwischen nach Wortlänge verteilt.
+// Markiert wird über CSS Custom Highlights (ändert das HTML nicht); wo es das nicht gibt, bleibt nur die Leiste.
+const Follow = (function () {
+  const OK = !!(window.CSS && CSS.highlights && window.Highlight);
+  const EXCL = '.kicker,#unkbox,.media,.hintbox,#fb,.rfbtns,svg,pre,.ex,.charts,script,style,.vidmeta,.vidwrap,.vidcard,.src';
+  const norm = w => w.toLowerCase().replace(/(\d)[.,](?=\d)/g, '$1').normalize('NFD').replace(/[^\p{L}\p{N}]/gu, '');
+  let words = [], toks = [], span = [], cur = -1, text = '', hl = null, lastUser = 0;
+  ['wheel', 'touchmove', 'keydown'].forEach(ev => window.addEventListener(ev, e => { if (ev !== 'keydown' || /^(Arrow|Page|Home|End| )/.test(e.key)) lastUser = Date.now(); }, { passive: true }));
+
+  function domToks() {
+    const root = document.getElementById('stepview'); const out = []; if (!root) return out;
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => {
+      const p = n.parentElement; if (!p || p.closest(EXCL)) return NodeFilter.FILTER_REJECT;
+      return /\S/.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    } });
+    let n; while ((n = tw.nextNode())) { const re = /\S+/g; let m; while ((m = re.exec(n.nodeValue))) out.push({ node: n, s: m.index, e: m.index + m[0].length, k: norm(m[0]) }); }
+    return out;
+  }
+  // Gesprochene Wörter den Wörtern auf dem Bildschirm zuordnen (monoton, kurze Sprünge frei, weite nur mit Bestätigung durch das nächste Wort)
+  function align() {
+    toks = domToks(); const nD = toks.length, nW = words.length, map = new Array(nW).fill(-1);
+    const nextKeyed = i => { for (let q = i + 1; q < nW; q++) if (words[q].k) return q; return -1; };
+    const confirm = (i, j) => { const q = nextKeyed(i); if (q < 0) return true; for (let d = j + 1; d <= Math.min(nD - 1, j + 4); d++) if (toks[d].k === words[q].k) return true; return false; };
+    let p = 0;
+    for (let i = 0; i < nW; i++) {
+      const k = words[i].k; if (!k) continue; let f = -1;
+      for (let j = p; j < Math.min(nD, p + 30); j++) if (toks[j].k === k && (j - p <= 2 || confirm(i, j))) { f = j; break; }
+      if (f < 0 && k.length > 2) for (let j = p + 30; j < nD; j++) if (toks[j].k === k && confirm(i, j)) { f = j; break; }
+      if (f >= 0) { map[i] = f; p = f + 1; }
+    }
+    span = new Array(nW);
+    for (let i = 0; i < nW; i++) {
+      if (map[i] >= 0) { span[i] = [map[i], map[i]]; continue; }
+      let a = -1, b = -1; for (let q = i - 1; q >= 0; q--) if (map[q] >= 0) { a = map[q]; break; }
+      for (let q = i + 1; q < nW; q++) if (map[q] >= 0) { b = map[q]; break; }
+      if (b < 0) b = nD;
+      const nb = b < nD && (a < 0 || (i > 0 && words[i - 1].end));
+      span[i] = nb ? [b, b] : b - a > 1 ? [a + 1, b - 1] : (a >= 0 ? [a, a] : null);
+    }
+  }
+  function prepare(t) {
+    text = t || ''; words = []; cur = -1;
+    const re = /\S+/g; let m;
+    while ((m = re.exec(text))) {
+      const w = m[0], tail = /[.!?:]["“”)]*$/.test(w) ? 8 : /[,;]["“”)]*$/.test(w) ? 3 : 0;
+      words.push({ s: m.index, k: norm(w), w: w.replace(/[^\p{L}\p{N}]/gu, '').length + 1 + tail, end: tail === 8 });
+    }
+    align(); clear();
+  }
+  function wordAt(ci) { let lo = 0, hi = words.length - 1, r = 0; while (lo <= hi) { const mid = (lo + hi) >> 1; if (words[mid].s <= ci) { r = mid; lo = mid + 1; } else hi = mid - 1; } return r; }
+  function scrollTo(r) {
+    if (Date.now() - lastUser < 4000) return;
+    const rc = r.getBoundingClientRect(); if (!rc.height) return;
+    const el = r.startContainer.parentElement; let sc = el && el.closest('main');
+    const box = sc ? sc.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+    const top = Math.max(box.top, 0) + 40, bot = Math.min(box.bottom, window.innerHeight) - 120;
+    if (rc.top < top || rc.bottom > bot) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  function at(i) {
+    if (!OK || i === cur || i < 0 || i >= words.length) return;
+    if (toks.length && !toks[0].node.isConnected) align();
+    cur = i; const sp = span[i]; if (!sp || !toks[sp[0]]) return;
+    try {
+      const r = document.createRange(); r.setStart(toks[sp[0]].node, toks[sp[0]].s); r.setEnd(toks[sp[1]].node, toks[sp[1]].e);
+      if (!hl) hl = new Highlight(); hl.clear(); hl.add(r); CSS.highlights.set('vword', hl);
+      scrollTo(r);
+    } catch (e) {}
+  }
+  function clear() { cur = -1; if (hl) hl.clear(); }
+  // Zeitplan für eine Aufnahme: erst grob nach Wortlänge, dann an Pausen in der Tonspur ausgerichtet
+  function plan(dur, a) {
+    const n = words.length, st = new Array(n); if (!n || !dur) return st;
+    const s0 = a ? a.start : 0, s1 = a ? a.end : dur;
+    const cum = [0]; words.forEach((w, i) => cum.push(cum[i] + w.w));
+    const spw = (s1 - s0) / (cum[n] || 1);
+    const anchors = [[0, s0]];
+    if (a && a.pauses.length) {
+      let lastW = 0, lastT = s0, pi = 0;
+      for (let b = 0; b < n - 1; b++) {
+        if (!words[b].end) continue;
+        const exp = lastT + (cum[b + 1] - cum[lastW]) * spw, win = Math.max(0.7, 0.25 * (exp - lastT));
+        let best = -1, bd = 1e9;
+        for (let q = pi; q < a.pauses.length; q++) {
+          const P = a.pauses[q], mid = (P[0] + P[1]) / 2; if (P[0] <= lastT) continue;
+          if (mid > exp + win) break; const d = Math.abs(mid - exp); if (d <= win && d < bd) { bd = d; best = q; }
+        }
+        if (best >= 0) { const P = a.pauses[best]; anchors.push([b + 1, P[1], P[0]]); lastW = b + 1; lastT = P[1]; pi = best + 1; }
+      }
+    }
+    anchors.push([n, s1, s1]);
+    for (let k = 0; k < anchors.length - 1; k++) {
+      const [w0, t0] = anchors[k], [w1, , t1end] = anchors[k + 1];
+      const tot = cum[w1] - cum[w0] || 1, len = Math.max(0, (t1end === undefined ? anchors[k + 1][1] : t1end) - t0);
+      for (let i = w0; i < w1; i++) st[i] = t0 + (cum[i] - cum[w0]) / tot * len;
+    }
+    return st;
+  }
+  async function pauses(url) {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    const ab = await (await fetch(url)).arrayBuffer(); const ctx = new AC();
+    try {
+      const buf = await new Promise((res, rej) => { const p = ctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); });
+      const ch = buf.getChannelData(0), sr = buf.sampleRate, hop = Math.round(sr * 0.01), nF = Math.floor(ch.length / hop), rms = new Float32Array(nF);
+      for (let f = 0; f < nF; f++) { let s = 0; for (let x = f * hop, e = x + hop; x < e; x++) s += ch[x] * ch[x]; rms[f] = Math.sqrt(s / hop); }
+      const sorted = Array.from(rms).sort((x, y) => x - y), thr = Math.max(0.004, sorted[Math.floor(nF * 0.95)] * 0.08);
+      let first = 0, last = nF - 1; while (first < nF && rms[first] < thr) first++; while (last > first && rms[last] < thr) last--;
+      const out = []; let run = -1;
+      for (let f = first; f <= last; f++) { if (rms[f] < thr) { if (run < 0) run = f; } else { if (run >= 0 && f - run >= 7) out.push([run / 100, f / 100]); run = -1; } }
+      return { start: first / 100, end: (last + 1) / 100, pauses: out };
+    } finally { try { ctx.close(); } catch (e) {} }
+  }
+  return { ok: OK, prepare, at, clear, wordAt, plan, pauses, count: () => words.length };
+})();
+
 // ---------- Vorlesen ----------
 // Stimmen (Julys Wunsch 16.11.2026, einstellbar über den Knopf in der Leiste, je Gerät gemerkt in lernkurs:vstimme):
 //  geraet (Standard): deutsche Systemstimme des Geräts · seraphina: Microsoft Seraphina (nur in Edge, braucht Internet)
@@ -6014,7 +6135,7 @@ const Voice = (function () {
   const audio = new Audio(); audio.preload = 'auto';
   let blobUrl = null;
   // Gerätestimme
-  let dev = { chunks: [], i: 0 }, devVoice = null, devLocal = null, seraVoice = null;
+  let dev = { chunks: [], offs: [], i: 0 }, devVoice = null, devLocal = null, seraVoice = null;
   const VOICES = [
     { id: 'geraet', name: 'Gerätestimme', short: 'Gerät', note: 'Die deutsche Stimme deines Geräts. Geht überall, auch offline.' },
     { id: 'seraphina', name: 'Seraphina', short: 'Seraphina', note: 'Natürliche Microsoft-Stimme. Nur im Browser Edge, braucht Internet.' },
@@ -6126,11 +6247,21 @@ const Voice = (function () {
     if (cur.trim()) out.push(cur.trim());
     return out;
   }
+  // Mitlesen mit der Gerätestimme: Wortmeldungen (boundary) der Stimme, sonst Schätzung nach Sprechtempo ab Beginn des Satzstücks
+  let devT0 = 0, devB = false;
+  setInterval(() => {
+    if (src !== 'dev' || !playing || devB || !devT0 || dev.i >= dev.chunks.length) return;
+    const ms = Date.now() - devT0; if (ms < 250) return;
+    const c = dev.chunks[dev.i]; Follow.at(Follow.wordAt(dev.offs[dev.i] + Math.min(c.length - 1, Math.floor(ms / 1000 * 14 * rate))));
+  }, 120);
   function devSpeak() {
     if (!window.speechSynthesis) { status('Vorlesen geht hier nicht'); playing = false; ui(); return; }
     const my = token;
     if (dev.i >= dev.chunks.length) { playing = false; ended = true; ui(); status('Fertig · Gerätestimme'); return; }
     const u = new SpeechSynthesisUtterance(dev.chunks[dev.i]); u.lang = 'de-DE'; u.rate = rate; if (devVoice) u.voice = devVoice;
+    const off = dev.offs[dev.i] || 0; devT0 = 0; devB = false; Follow.at(Follow.wordAt(off));
+    u.onstart = () => { if (my === token) devT0 = Date.now(); };
+    u.onboundary = e => { if (my !== token || (e.name && e.name !== 'word')) return; devB = true; Follow.at(Follow.wordAt(off + (e.charIndex || 0))); };
     u.onend = () => { if (my !== token) return; dev.i++; ui(); devSpeak(); };
     u.onerror = e => {
       if (my !== token) return; if (e && /interrupted|canceled/.test(e.error || '')) return;
@@ -6151,7 +6282,7 @@ const Voice = (function () {
   async function start(s) {
     const t = SP[s.key]; if (!t) return;
     stopAll(); const my = token;
-    mode = true; ended = false; curKey = s.key; bar.hidden = false; src = null;
+    mode = true; ended = false; curKey = s.key; bar.hidden = false; src = null; recPlan = null; Follow.prepare(t);
     $('vfill').style.width = '0%'; $('vtime').textContent = ''; status('Lädt …'); playing = true; ui(); media(s);
     let url = null; try { url = await loadRec(t); } catch (e) { url = null; }
     if (my !== token) { if (url) URL.revokeObjectURL(url); return; }
@@ -6159,10 +6290,12 @@ const Voice = (function () {
     if (url) {
       if (blobUrl) URL.revokeObjectURL(blobUrl); blobUrl = url;
       src = 'rec'; audio.src = url; audio.playbackRate = rate; try { audio.preservesPitch = true; } catch (e) {}
+      // Zeitplan fürs Mitlesen: sofort grob, nach dem Auswerten der Pausen genauer
+      if (Follow.ok) Follow.pauses(url).then(a => { if (my === token && a) recAn = a, recPlan = Follow.plan(audio.duration || a.end, a); }).catch(() => {});
       status(playing ? recLabel() : 'Pausiert');
       if (playing) { try { await audio.play(); } catch (e) { playing = false; status('Zum Starten tippen'); } }
     } else {
-      src = 'dev'; dev = { chunks: chunksOf(t), i: 0 }; status(devLabel()); if (playing) devSpeak();
+      src = 'dev'; dev = { chunks: chunksOf(t), offs: [], i: 0 }; { let c = 0; dev.offs = dev.chunks.map(x => { const k = t.indexOf(x, c); c = k < 0 ? c : k + x.length; return k < 0 ? c : k; }); } status(devLabel()); if (playing) devSpeak();
     }
     ui();
   }
@@ -6180,10 +6313,20 @@ const Voice = (function () {
     ui();
   }
   function toggle() { const s = L.steps[state.cur]; if (!SP[s.key]) return; if (!mode || curKey !== s.key) return start(s); if (playing) pause(); else if (!src) { playing = true; start(s); } else resume(); }
-  function close() { stopAll(); mode = false; ended = false; bar.hidden = true; src = null; ui(); }
+  function close() { stopAll(); mode = false; ended = false; bar.hidden = true; src = null; Follow.clear(); ui(); }
 
+  // Mitlesen bei Aufnahmen: Wort zur aktuellen Abspielzeit
+  let recPlan = null, recAn = null, raf = 0;
+  function recWord() {
+    if (src !== 'rec' || !recPlan) return; const t = audio.currentTime || 0;
+    let lo = 0, hi = recPlan.length - 1, r = 0; while (lo <= hi) { const m = (lo + hi) >> 1; if (recPlan[m] <= t) { r = m; lo = m + 1; } else hi = m - 1; }
+    Follow.at(r);
+  }
+  function loop() { raf = 0; recWord(); if (src === 'rec' && playing) raf = requestAnimationFrame(loop); }
   audio.addEventListener('timeupdate', ui);
-  audio.addEventListener('loadedmetadata', ui);
+  audio.addEventListener('loadedmetadata', () => { if (src === 'rec' && !recPlan) recPlan = Follow.plan(audio.duration, recAn); ui(); });
+  audio.addEventListener('seeked', recWord);
+  audio.addEventListener('playing', () => { if (!raf) raf = requestAnimationFrame(loop); });
   audio.addEventListener('ended', () => { playing = false; ended = true; status('Fertig'); ui(); });
   audio.addEventListener('pause', () => { if (src === 'rec' && !audio.ended) { playing = false; ui(); } });
   audio.addEventListener('play', () => { if (src === 'rec') { playing = true; ui(); } });
