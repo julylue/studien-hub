@@ -304,6 +304,10 @@ table.vars td,table.cheat td{padding:10px 8px}
 .fb.warn{background:var(--warnbg)}
 .hintbox{border:none;background:var(--panel);border-radius:12px;padding:12px 16px;font-size:16px}
 .numin{font-size:16px;min-height:44px;background:var(--ed)}
+.numwrap{position:relative;display:inline-flex;flex:none}
+.numwrap .numin{padding-right:52px}
+.negbtn{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:40px;height:34px;border-radius:6px;border:none;background:var(--panel2);color:var(--text);font-family:var(--mono);font-size:17px;cursor:pointer}
+.negbtn:active{background:var(--line)}
 .numin:focus{outline:2px solid var(--accent)}
 .rfrow{border:none;background:var(--panel);border-radius:12px;padding:14px 16px}
 .rft{font-size:16px}
@@ -5381,7 +5385,7 @@ function parseNum(raw) {
   if (/%/.test(raw)) return { err: '<b class="h">Ohne Prozentzeichen</b>Nur die Zahl eintragen.' };
   if (/[a-zA-Z=°]/.test(raw)) return { err: '<b class="h">Nur die Zahl</b>Keine Buchstaben oder Zeichen, nur die Zahl selbst.' };
   const usedPoint = /\./.test(raw) && !/,/.test(raw);
-  const x = parseFloat(raw.replace(/\s/g, '').replace(',', '.'));
+  const x = parseFloat(raw.replace(/\s/g, '').replace(/^[−–]/, '-').replace(',', '.'));
   if (isNaN(x)) return { err: 'Das ist keine gültige Zahl.' };
   return { x, usedPoint, decIn: (raw.split(/[.,]/)[1] || '').length };
 }
@@ -5892,6 +5896,13 @@ function render() {
   }
   h += '<div class="fb" id="fb"></div>';
   $('stepview').innerHTML = h;
+  // Minus am Handy (Julys Rückmeldung 17.11.2026): Die Zahlentastatur von iOS hat kein Minus, deshalb ein Knopf neben jedem Zahlenfeld
+  if (window.matchMedia && matchMedia('(pointer: coarse)').matches) document.querySelectorAll('#stepview .numin').forEach(inp => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'negbtn'; b.textContent = '±'; b.setAttribute('aria-label', 'Minus davor setzen oder entfernen');
+    b.addEventListener('pointerdown', e => e.preventDefault());
+    b.addEventListener('click', e => { e.preventDefault(); const v = inp.value.trim(); inp.value = /^[-−–]/.test(v) ? v.replace(/^[-−–]\s*/, '') : '-' + v; inp.focus(); inp.dispatchEvent(new Event('input', { bubbles: true })); });
+    const w = document.createElement('span'); w.className = 'numwrap'; inp.before(w); w.append(inp, b);
+  });
   $('unkbtn').onclick = () => unklarBox(s, uid);
   $('bugbtn').onclick = () => bugBox(s);
   $('main').scrollTop = 0; con.innerHTML = '';
