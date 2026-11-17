@@ -6023,17 +6023,22 @@ const Follow = (function () {
     let n; while ((n = tw.nextNode())) { const re = /\S+/g; let m; while ((m = re.exec(n.nodeValue))) out.push({ node: n, s: m.index, e: m.index + m[0].length, k: norm(m[0]) }); }
     return out;
   }
-  // Gesprochene Wörter den Wörtern auf dem Bildschirm zuordnen (monoton, kurze Sprünge frei, weite nur mit Bestätigung durch das nächste Wort)
+  // Gesprochene Wörter den Wörtern auf dem Bildschirm zuordnen: längste gemeinsame Wortfolge (LCS), längere Wörter zählen mehr
   function align() {
     toks = domToks(); const nD = toks.length, nW = words.length, map = new Array(nW).fill(-1);
-    const nextKeyed = i => { for (let q = i + 1; q < nW; q++) if (words[q].k) return q; return -1; };
-    const confirm = (i, j) => { const q = nextKeyed(i); if (q < 0) return true; for (let d = j + 1; d <= Math.min(nD - 1, j + 4); d++) if (toks[d].k === words[q].k) return true; return false; };
-    let p = 0;
-    for (let i = 0; i < nW; i++) {
-      const k = words[i].k; if (!k) continue; let f = -1;
-      for (let j = p; j < Math.min(nD, p + 30); j++) if (toks[j].k === k && (j - p <= 2 || confirm(i, j))) { f = j; break; }
-      if (f < 0 && k.length > 2) for (let j = p + 30; j < nD; j++) if (toks[j].k === k && confirm(i, j)) { f = j; break; }
-      if (f >= 0) { map[i] = f; p = f + 1; }
+    if (nW && nD && nW * nD <= 6e6) {
+      const W = nD + 1, sc = new Float32Array((nW + 1) * W), dir = new Uint8Array((nW + 1) * W);
+      for (let i = 1; i <= nW; i++) {
+        const k = words[i - 1].k, val = k ? 1 + Math.min(2, k.length / 4) : 0;
+        for (let j = 1; j <= nD; j++) {
+          const up = sc[(i - 1) * W + j], lf = sc[i * W + j - 1];
+          let best = up, d = 1; if (lf > best) { best = lf; d = 2; }
+          if (val && toks[j - 1].k === k) { const dg = sc[(i - 1) * W + j - 1] + val; if (dg >= best) { best = dg; d = 3; } }
+          sc[i * W + j] = best; dir[i * W + j] = d;
+        }
+      }
+      let i = nW, j = nD;
+      while (i > 0 && j > 0) { const d = dir[i * W + j]; if (d === 3) { map[i - 1] = j - 1; i--; j--; } else if (d === 1) i--; else j--; }
     }
     span = new Array(nW);
     for (let i = 0; i < nW; i++) {
