@@ -182,6 +182,7 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
 .stand svg{width:14px;height:14px}
 .stand.off{color:var(--late);background:var(--late-soft);padding:4px 10px;border-radius:999px}
 /* Rückstand antippbar */
+.vt{margin:8px 0 0;font-size:15px;line-height:1.4;color:var(--muted)}
 .sl{font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .odl .row{padding:11px 0}.odl .row+.row{border-top:1px solid var(--soft)}
 /* Am Schreibtisch: Als Nächstes und Zeitplan nebeneinander */
@@ -271,7 +272,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="26";
+const APP_V="27";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -321,6 +322,10 @@ function zpDone(z){return isDone(z)||st.rows.some(r=>String(r.baustein)===String
 /* Nachholen (Julys Entscheidung 12.11.): bewusst verschobene Bausteine mit neuem Plan-Datum, zählen nicht zum Rückstand */
 const isNach=z=>/^nachholen$/i.test(String(z.status||"").trim())&&!zpDone(z);
 function nachList(){return st.zp.filter(isNach).sort((a,b)=>d10(a.ende).localeCompare(d10(b.ende)));}
+/* Aufholen und Vertiefen (Julys Entscheidung 18.11.): erledigt ab bestandenem Lückencheck, geparkte Vertiefungspunkte sind nie Rückstand */
+const vertN=z=>Math.max(0,parseInt(z.vertiefen,10)||0);
+const vertSum=()=>st.zp.reduce((a,z)=>a+vertN(z),0);
+const checkTxt=z=>{const v=parseFloat(String(z.lueckencheck??"").replace(",",".").replace("%",""));if(!isFinite(v))return "";return Math.round(v<=1?v*100:v)+" %";};
 const isUnk=z=>/^unklar$/i.test(String(z.status||"").trim())&&!zpDone(z);
 const zpLate=z=>isMin(z)&&!isTermin(z)&&!zpDone(z)&&!isNach(z)&&d10(z.ende)&&d10(z.ende)<TODAY();
 function overdue(){return st.zp.filter(zpLate);}
@@ -416,7 +421,7 @@ function vNext(){
   if(!st.rows.length&&!st.zp.length)return st.net==="off"
     ?`<p class="date">${date}</p><div class="empty" role="status"><b>Keine Verbindung</b>Dein Stand kommt aus deiner Tabelle. Sobald du online bist, lädt er von selbst.</div><button class="done sec" data-retry>${REFRESH}Erneut versuchen</button>`
     :`<p class="date">${date}</p><div class="empty"><b>Lädt …</b>Der Stand kommt aus deiner Tabelle.</div>`;
-  const od=overdue();const n=od.length;const nN=nachList().length;
+  const od=overdue();const n=od.length;const nN=nachList().length;const nV=vertSum();
   const by={};od.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+1);
   const mx=Math.max(0,...Object.values(by));const top=Object.keys(by).filter(k=>by[k]===mx).map(k=>KURS[k]||k);
   const most=n>1&&top.length<=2?` Am meisten bei ${top.join(" und ")}.`:"";
@@ -436,7 +441,7 @@ function vNext(){
   const toggle=rest.length?`<button class="toggle" data-open aria-expanded="${st.open}">${st.open?"Weniger anzeigen":`Andere Aufgabe wählen (${rest.length})`}</button>`:"";
   const list=st.open&&rest.length?`<div class="list"><p class="pickh">Tippe auf eine Aufgabe, um sie jetzt zu machen.</p>${rest.map(r=>{const t=tagOf(r);
     return `<div class="row"><button class="ck ${t.box||""}" data-tog="${esc(r.id)}" aria-label="${esc(r.schritt)} abhaken"><span>${CHECK}</span></button><button class="tx pick" data-pick="${esc(r.id)}" aria-label="${esc(r.schritt)} jetzt machen"><span class="t">${esc(r.schritt)}</span><span class="s">${esc(whereOf(r))}</span></button>${t.html||`<span class="tag ${t.c}">${esc(t.t)}</span>`}</div>`;}).join("")}</div>`:"";
-  return `<div class="dl"><p class="date">${date}</p>${vStand()}</div><h1 class="head" style="color:var(${n||crit.length?"--late":"--ok"})">${head}</h1><p class="sum">${sum}</p>${statRow}${card}${toggle}${list}`;
+  return `<div class="dl"><p class="date">${date}</p>${vStand()}</div><h1 class="head" style="color:var(${n||crit.length?"--late":"--ok"})">${head}</h1><p class="sum">${sum}</p>${nV?`<p class="vt">${nV} ${nV===1?"Punkt":"Punkte"} zum Vertiefen geparkt. Das zählt nicht als Rückstand.</p>`:""}${statRow}${card}${toggle}${list}`;
 }
 
 const PLAY='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
@@ -583,7 +588,10 @@ function zRow(z,w){
   else if(z.frist&&!d)chip=fristChip(z,"chip");
   else if(!d&&d10(z.ende)>iso(w.e))chip=`<span class="chip">bis ${esc(dm(z.ende))}</span>`;
   else if(late)chip=`<span class="chip late">seit ${esc(dm(z.ende))}</span>`;
-  const sub=z.hinweis&&min&&!/^Zusatz/.test(z.hinweis)?`<span class="s">${esc(z.hinweis)}</span>`:"";
+  if(d&&checkTxt(z))chip=`<span class="chip">${esc(checkTxt(z))} richtig</span>`;
+  const subs=[];if(z.hinweis&&min&&!/^Zusatz/.test(z.hinweis))subs.push(z.hinweis);
+  if(vertN(z))subs.push(vertN(z)+(vertN(z)===1?" Punkt":" Punkte")+" zum Vertiefen geparkt");
+  const sub=subs.length?`<span class="s">${esc(subs.join(" · "))}</span>`:"";
   return `<div class="row ${d?"d":""} ${min?"":"z"}"><button class="ck ${box}" data-zp="${esc(z.id)}" aria-pressed="${d}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(z.titel)}</span>${sub}</span>${chip}</div>`;
 }
 function vSheet(){
