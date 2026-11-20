@@ -272,7 +272,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="28";
+const APP_V="29";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -331,7 +331,7 @@ const zpLate=z=>isMin(z)&&!isTermin(z)&&!zpDone(z)&&!isNach(z)&&d10(z.ende)&&d10
 function overdue(){return st.zp.filter(zpLate);}
 /* Feste Lernkurs-Bausteine (Julys Entscheidung 20.11.): Rückstand als Zeit, nach Lektion gruppiert, einzelne Bausteine erst beim Antippen */
 const isBst=z=>/^kurs-baustein$/i.test(String(z.art||"").trim());
-const bMin=z=>{const m=String(z.hinweis||"").match(/ca\. (\d+) Min/);return m?+m[1]:30;};
+const bMin=z=>{const r=String(z.rest??"").trim();if(r!==""&&isFinite(+r))return +r;const m=String(z.hinweis||"").match(/ca\. (\d+) Min/);return m?+m[1]:30;};   // rest kommt vom Lernkurs (gleiche Rechnung wie dort), sonst geplante Dauer
 const bLes=z=>{const m=String(z.hinweis||"").match(/^Lernkurs (L\d+ [^,]+),/);return m?m[1]:(String(z.titel||"").match(/^L\d+/)||["Lernkurs"])[0];};
 const fmtMin=m=>m<60?"ca. "+m+" Min.":m<600?"ca. "+fmtH1(m/60)+" Std.":"ca. "+Math.round(m/60)+" Std.";
 /* Eigenes Plan-Datum (ende) und echte Frist (frist) getrennt zeigen: überfällig ab Plan-Datum, kritisch erst 3 Tage vor der echten Frist */
