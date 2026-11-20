@@ -272,7 +272,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="32";
+const APP_V="33";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -378,17 +378,39 @@ function addManual(x,min){const z={id:"m"+Date.now(),ref:String(x.ref),titel:x.t
 const fmtH1=h=>String(Math.round(h*10)/10).replace(".",",");
 
 /* ---------- Als Nächstes ---------- */
+/* Empfehlung wie in den Sessions (Lernanleitung Abschnitt 1, Start Punkt 4; Julys Wunsch 20.11.: "bei als nächstes immer stehen was empfohlen wird", "alles soll so abgebildet werden wie es auch wirklich bearbeitet wird"):
+   1. Quiz mit echter Frist in den nächsten 7 Tagen (davor seine Abkürzung im Lernkurs), 2. Abrufrunde (einmal pro Lerntag), 3. angefangene Bausteine (läuft), kleinster Rest zuerst,
+   4. je Kurs der älteste nicht erledigte Pflicht-Baustein, streng der Reihe nach (nichts überspringen), Kurse nach Plan-Datum. Quelle ist das Blatt zeitplan, nicht der alte Wochenplan. */
+const isAbk=z=>/^kurs-abk/i.test(String(z.art||"").trim());
+const isQuiz=z=>/^quiz$/i.test(String(z.art||"").trim());
+const behind=z=>isNach(z)||zpLate(z)||/^nachholen/i.test(String(z.hinweis||"").trim());
+const sessArt=z=>behind(z)?"aufholen":"vertiefen";
+const released=z=>isBst(z)||isNach(z)||behind(z)||!d10(z.start)||d10(z.start)<=TODAY();   /* Units erst ab Freischaltung; Lernkurs-Bausteine und Nachholen sind schon frei */
+const zpIdx=z=>st.zp.indexOf(z);
+function zpItem(z,why){return {id:"zp:"+z.id,schritt:z.titel,kurs:z.kurs,baustein:z.id,notiz:isBst(z)?"Lernkurs, "+fmtMin(bMin(z)):(z.hinweis||""),prioritaet:isMin(z)?"Pflicht":"Zusatz",status:"offen",_zp:true,sa:sessArt(z),why:why||""};}
 function queueList(){
-  const wk=iso(monday(new Date()));
-  // Abrufrunde höchstens einmal pro Tag und erst ab ihrem Fälligkeitstag
+  const today=TODAY();const in7=iso(addD(day(today),7));
+  const open=st.zp.filter(z=>!zpDone(z)&&!isTermin(z)&&!/^frei/i.test(String(z.gruppe||"")));
+  const out=[];const seen=new Set();const add=(z,why)=>{if(!z||seen.has(z.id))return;seen.add(z.id);out.push(zpItem(z,why));};
+  // 1. Quiz mit Frist in 7 Tagen, vorher die Abkürzung
+  open.filter(z=>isQuiz(z)&&z.frist&&d10(z.frist)<=in7).sort((a,b)=>d10(a.frist).localeCompare(d10(b.frist))).forEach(qz=>{
+    const ab=open.find(z=>isAbk(z)&&z.id===qz.id+"-abk");if(ab)add(ab,"Vor "+qz.titel.split(" ").slice(0,2).join(" ")+", echte Frist "+dm(qz.frist));add(qz,"Echte Frist "+dm(qz.frist));});
+  // 2. Abrufrunde aus dem Wochenplan (höchstens einmal pro Lerntag)
   const isAbruf=r=>/^abruf/i.test(String(r.art||""));
-  const abrufToday=st.rows.some(r=>isAbruf(r)&&isDone(r)&&d10(r.erledigt_am)===TODAY());
-  const rows=st.rows.filter(r=>!isDone(r)&&d10(r.woche)<=wk&&!(isAbruf(r)&&(abrufToday||(r.faellig&&d10(r.faellig)>TODAY()))));
-  const linked=new Set(st.rows.filter(r=>!isDone(r)).map(r=>String(r.baustein||"")));
-  // Was laut Uni überfällig ist, aber noch nicht im Wochenplan steht, kommt trotzdem auf die Liste
-  const extra=overdue().filter(z=>!linked.has(String(z.id))).map(z=>({id:"zp:"+z.id,schritt:z.titel,kurs:z.kurs,baustein:z.id,notiz:z.hinweis||"",rang:50,prioritaet:"Pflicht",status:"offen",_zp:true}));
-  const rk=r=>r.rang===""||r.rang==null?99:+r.rang;
-  return rows.concat(extra).sort((a,b)=>(isZ(a)-isZ(b))||(rk(a)-rk(b))||d10(a.faellig).localeCompare(d10(b.faellig)));
+  const abrufToday=st.rows.some(r=>isAbruf(r)&&isDone(r)&&d10(r.erledigt_am)===today);
+  const abr=abrufToday?[]:st.rows.filter(r=>isAbruf(r)&&!isDone(r)&&!(r.faellig&&d10(r.faellig)>today));
+  // 3. angefangen
+  const lf=open.filter(z=>/^läuft$/i.test(String(z.status||"").trim())&&!isAbk(z)&&!isQuiz(z)).sort((a,b)=>bMin(a)-bMin(b));
+  lf.forEach(z=>add(z,"Angefangen, zuerst fertig machen"));
+  // 4. je Kurs der älteste offene Pflicht-Baustein (Reihenfolge im Blatt), nur was schon freigeschaltet ist
+  const nextOf={};open.forEach(z=>{if(!isMin(z)||isAbk(z)||isQuiz(z)||seen.has(z.id)||!released(z))return;if(!nextOf[z.kurs])nextOf[z.kurs]=z;});
+  Object.values(nextOf).sort((a,b)=>(d10(a.frist)||"9").localeCompare(d10(b.frist)||"9")||d10(a.ende).localeCompare(d10(b.ende))).forEach(z=>add(z,"Nächster Schritt in "+(KURS[z.kurs]||z.kurs)));
+  // danach je Kurs die weiteren offenen Pflicht-Bausteine in Reihenfolge (für "Andere Aufgabe wählen")
+  const per={};open.forEach(z=>{if(!isMin(z)||isAbk(z)||isQuiz(z)||seen.has(z.id)||!released(z))return;(per[z.kurs]=per[z.kurs]||[]).push(z);});
+  for(let k=0;k<3;k++)Object.values(nextOf).forEach(n=>{const l=per[n.kurs]||[];if(l[k])add(l[k],"");});   // je Kurs die nächsten drei in Reihenfolge
+  const extra=st.rows.filter(r=>!isDone(r)&&!r.baustein&&!isAbruf(r)&&d10(r.woche)<=iso(monday(new Date())));
+  const first=out.filter(x=>/^Echte Frist|^Vor /.test(x.why));const rest=out.filter(x=>!first.includes(x));
+  return first.concat(abr,rest,extra.filter(r=>!isZ(r)),extra.filter(isZ));
 }
 function whereOf(r){const z=r.baustein?zpById(r.baustein):null;
   if(z){const g=String(z.gruppe||"");const range=` · ${dm(z.start)}–${dm(z.ende)}`;return g+(isTermin(z)?"":range);}
@@ -399,6 +421,7 @@ function tagOf(r){
   if(z&&isUnk(z))return {t:"prüfen",c:"late",box:"unk"};
   if(z&&z.frist&&!zpDone(z))return {html:fristChip(z,"tag"),box:zpLate(z)?"late":""};
   if(z&&zpLate(z))return {t:"seit "+dm(z.ende),c:"late",box:"late"};
+  if(z&&isNach(z))return {t:"aufholen",c:""};
   return {t:"diese Woche",c:""};
 }
 const REFRESH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>';
@@ -443,8 +466,8 @@ function vNext(){
   const sum=esc(critTxt)+(n?`<button class="sl" data-od aria-haspopup="dialog">${esc(odTxt)} aus früheren Wochen</button> ${odPl?"sind":"ist"} noch offen.${esc(most)}${esc(calm)}`:"Alles aus früheren Wochen ist erledigt.")+(nN?` <button class="sl" data-nh aria-haspopup="dialog">${nN} zum Nachholen</button> ${nN===1?"ist":"sind"} eingeplant, das zählt nicht als Rückstand.`:"");
   const q=queueList();const run=running();
   /* Gewählte Aufgabe vor laufender Uhr vor Empfehlung: July kann jederzeit etwas anderes nehmen */
-  const byPick=st.pick?q.find(r=>String(r.id)===String(st.pick)):null;
-  const byRun=run?q.find(r=>refsOf(r).has(String(run.ref))):null;
+  const byPick=st.pick&&st.pickDay===TODAY()?q.find(r=>String(r.id)===String(st.pick)):null;
+  const byRun=run?q.find(r=>refsOf(r).has(String(run.ref))):null;   /* nur eine laufende Uhr verdrängt die Empfehlung, eine pausierte nicht (Julys Wunsch 20.11.) */
   const cur=byPick||byRun||q[0];const rest=q.filter(r=>r!==cur);
   const card=cur?vCard(cur):`<div class="empty"><b>Nichts mehr offen</b>Für diese Woche ist alles erledigt.</div>`;
   const S=stats();
@@ -458,12 +481,14 @@ function vNext(){
 const PLAY='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
 function vCard(cur){
   const run=running();const segs=segsFor(cur);const mine=run&&refsOf(cur).has(String(run.ref));
-  const head=`<p class="where">${esc(whereOf(cur))}</p><p class="t">${esc(cur.schritt)}</p>`;
+  const SA={aufholen:"Aufholsession: kurz. Erst Lückencheck, nur Lücken erklären, alles Tiefere parken.",vertiefen:"Vertiefungssession: erst geparkte Punkte klären, dann normal erarbeiten."};
+  const saTxt=cur.sa&&!isKurs(cur)&&!isAbk(zpById(cur.baustein)||{})&&!isQuiz(zpById(cur.baustein)||{})?SA[cur.sa]:"";
+  const head=`<p class="where">${esc(whereOf(cur))}</p><p class="t">${esc(cur.schritt)}</p>${cur.why?`<p class="why"><b>${esc(cur.why)}</b></p>`:""}${saTxt?`<p class="why">${esc(saTxt)}</p>`:""}`;
   if(mine)return `<section class="now"><p class="lbl">Läuft <span class="pillc live">seit ${hm(num(run.start))}</span></p>${head}<p class="clock" data-clock="${num(run.start)}">${fmtClock(Date.now()-num(run.start))}</p>
     <div class="row2"><button class="done sec" data-pause>Pause</button><button class="done" data-fertig="${esc(cur.id)}">Fertig</button></div></section>`;
   if(isKurs(cur)){const ks=segs.filter(z=>z.quelle==="kurs");const tot=ks.reduce((a,z)=>a+segMs(z),0);
     return `<section class="now"><p class="lbl">${ks.length?`Im Kurs begonnen <span class="pillc">bisher ${fmtH(tot)}</span>`:"Als Nächstes"}</p>${head}${cur.notiz?`<p class="why">${esc(cur.notiz)}</p>`:""}
-    <a class="done" href="${KURS_URL}" target="_blank" rel="noopener">${PLAY}${ks.length?"Im Kurs weitermachen":"Im Kurs starten"}</a><button class="plain" data-tog="${esc(cur.id)}">Lektion abgeschlossen</button></section>`;}
+    <a class="done" href="${KURS_URL}" target="_blank" rel="noopener">${PLAY}${ks.length?"Im Kurs weitermachen":"Im Kurs starten"}</a><button class="plain" data-tog="${esc(cur.id)}">${isBst(zpById(cur.baustein)||{})?"Baustein abhaken":"Lektion abgeschlossen"}</button></section>`;}
   if(segs.length){const tot=segs.reduce((a,z)=>a+segMs(z),0);
     return `<section class="now"><p class="lbl">Pausiert <span class="pillc">bisher ${fmtClock(tot)}</span></p>${head}${cur.notiz?`<p class="why">${esc(cur.notiz)}</p>`:""}
     <div class="row2"><button class="done" data-start="${esc(cur.id)}">${PLAY}Weiter</button><button class="done sec" data-fertig="${esc(cur.id)}">Fertig</button></div></section>`;}
@@ -645,8 +670,8 @@ function markDone(id){if(String(id).startsWith("zp:")){setZp(String(id).slice(3)
 document.addEventListener("click",e=>{
   const q=s=>e.target.closest(s);
   let el;
-  if(el=q("[data-pick]")){st.pick=el.dataset.pick;st.open=false;render();try{window.scrollTo({top:0,behavior:"smooth"});const c=$(".colL");if(c)c.scrollTop=0;}catch(_){}return;}
-  if(el=q("[data-start]")){const x=itemById(el.dataset.start);if(x){st.pick=String(x.id);startFor(x);save();render();sync();}return;}
+  if(el=q("[data-pick]")){st.pick=el.dataset.pick;st.pickDay=TODAY();st.open=false;render();try{window.scrollTo({top:0,behavior:"smooth"});const c=$(".colL");if(c)c.scrollTop=0;}catch(_){}return;}
+  if(el=q("[data-start]")){const x=itemById(el.dataset.start);if(x){st.pick=String(x.id);st.pickDay=TODAY();startFor(x);save();render();sync();}return;}
   if(q("[data-pause]")){if(stopRunning()){save();render();toast("Pausiert");sync();}return;}
   if(el=q("[data-fertig]")){stopRunning();markDone(el.dataset.fertig);commit(true);return;}
   if(el=q("[data-min]")){addManual(st.ask,+el.dataset.min);st.ask=null;commit(true);return;}
