@@ -272,7 +272,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="30";
+const APP_V="31";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -413,11 +413,11 @@ function vOd(){ // Liste der überfälligen Aufgaben, über "x Aufgaben aus frü
   const nh=st.odOpen==="nh";const ttl=nh?"Zum Nachholen":"Aus früheren Wochen offen";
   const od=nh?nachList():overdue().slice().sort((a,b)=>d10(a.ende).localeCompare(d10(b.ende)));
   const wk=z=>{const a=day(z.woche),f=day(FIRST);return a&&f?"Woche "+(Math.round((a-f)/(7*864e5))+1):"";};
-  const row1=z=>{const sub=isBst(z)?fmtMin(bMin(z)):[KURS[z.kurs]||z.kurs||"",wk(z),isTermin(z)?"":`${dm(z.start)}–${dm(z.ende)}`].filter(Boolean).join(" · ");
+  const row1=z=>{const sub=isBst(z)?"Lernkurs":[KURS[z.kurs]||z.kurs||"",wk(z),isTermin(z)?"":`${dm(z.start)}–${dm(z.ende)}`].filter(Boolean).join(" · ");
     return `<div class="row"><button class="ck ${nh?"":isUnk(z)?"unk":"late"}" data-tog="zp:${esc(z.id)}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(isBst(z)?String(z.titel).replace(/^L\d+ /,""):z.titel)}</span><span class="s">${esc(sub)}</span></span>${nh?`<span class="tag">bis ${esc(dm(z.ende))}</span>`:z.frist?fristChip(z,"tag"):`<span class="tag late">seit ${esc(dm(z.ende))}</span>`}</div>`;};
   const groups=[];od.filter(isBst).forEach(z=>{const k=bLes(z);let g=groups.find(x=>x.k===k);if(!g){g={k,l:[]};groups.push(g);}g.l.push(z);});
-  const rows=od.filter(z=>!isBst(z)).map(row1).join("")+groups.map(g=>{const open=st.odx===g.k,m=g.l.reduce((a,z)=>a+bMin(z),0);
-    return `<button class="odg" data-odx="${esc(g.k)}" aria-expanded="${open}"><span class="tx"><span class="t">Statistik ${esc(g.k)}</span><span class="s">${g.l.length} ${g.l.length===1?"Baustein":"Bausteine"} · ${fmtMin(m)}</span></span><i>${open?"zuklappen":"anzeigen"}</i></button>${open?`<div class="gin">${g.l.map(row1).join("")}</div>`:""}`;}).join("");
+  const rows=od.filter(z=>!isBst(z)).map(row1).join("")+groups.map(g=>{const open=st.odx===g.k;
+    return `<button class="odg" data-odx="${esc(g.k)}" aria-expanded="${open}"><span class="tx"><span class="t">Statistik ${esc(g.k)}</span><span class="s">${g.l.length} ${g.l.length===1?"Baustein":"Bausteine"}</span></span><i>${open?"zuklappen":"anzeigen"}</i></button>${open?`<div class="gin">${g.l.map(row1).join("")}</div>`:""}`;}).join("");
   return `<div class="sheet"><button data-odclose aria-label="Schließen"></button><div class="p" role="dialog" aria-label="${ttl}">
   <div class="h"><h2>${ttl}</h2><button data-odclose>Fertig</button></div><div class="l odl">${rows||`<p class="none">Alles erledigt.</p>`}</div></div></div>`;
 }
@@ -430,10 +430,10 @@ function vNext(){
     ?`<p class="date">${date}</p><div class="empty" role="status"><b>Keine Verbindung</b>Dein Stand kommt aus deiner Tabelle. Sobald du online bist, lädt er von selbst.</div><button class="done sec" data-retry>${REFRESH}Erneut versuchen</button>`
     :`<p class="date">${date}</p><div class="empty"><b>Lädt …</b>Der Stand kommt aus deiner Tabelle.</div>`;
   const od=overdue();const n=od.length;const nN=nachList().length;const nV=vertSum();
-  const odB=od.filter(isBst),odA=od.filter(z=>!isBst(z)),odM=odB.reduce((a,z)=>a+bMin(z),0);
-  const odTxt=[odA.length?odA.length+" "+(odA.length===1?"Aufgabe":"Aufgaben"):"",odB.length?fmtMin(odM)+" Lernkurs ("+odB.length+" "+(odB.length===1?"Baustein":"Bausteine")+")":""].filter(Boolean).join(" und ");
-  const odPl=odA.length+(odB.length?1:0)>1||odA.length>1;
-  const by={};odA.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+1);odB.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+bMin(z)/30);
+  const odB=od.filter(isBst),odA=od.filter(z=>!isBst(z));   /* Rückstand nur als Anzahl, keine Zeit (Julys Wunsch 20.11.) */
+  const odTxt=[odA.length?odA.length+" "+(odA.length===1?"Aufgabe":"Aufgaben"):"",odB.length?odB.length+" Lernkurs-"+(odB.length===1?"Baustein":"Bausteine"):""].filter(Boolean).join(" und ");
+  const odPl=odA.length+odB.length>1;
+  const by={};odA.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+1);odB.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+1);
   const mx=Math.max(0,...Object.values(by));const top=Object.keys(by).filter(k=>by[k]===mx).map(k=>KURS[k]||k);
   const nK=Object.keys(by).length;const most=nK===1?` Alles davon ist ${KURS[Object.keys(by)[0]]||Object.keys(by)[0]}.`:n>1&&top.length<=2?` Am meisten bei ${top.join(" und ")}.`:"";   /* nur ein Kurs: sagen, welcher, statt "am meisten" (Julys Frage 20.11.) */
   const crit=st.zp.filter(z=>zpCrit(z)&&isMin(z));
