@@ -184,7 +184,7 @@ h1.vh{margin:10px 0 0;font-size:28px;font-weight:800;letter-spacing:-.01em}
 /* Rückstand antippbar */
 .vt{margin:8px 0 0;font-size:15px;line-height:1.4;color:var(--muted)}
 .sl{font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
-.odl .row{padding:11px 0}.odl .row+.row{border-top:1px solid var(--soft)}
+.odl .row{padding:11px 0}.odl .row+.row{border-top:1px solid var(--soft)}.odl .odg{display:flex;align-items:center;gap:10px;width:100%;padding:12px 0;background:none;border:0;border-top:1px solid var(--soft);color:inherit;font:inherit;text-align:left;cursor:pointer}.odl .odg .t{font-weight:700}.odl .odg .s{display:block;font-size:13px;color:var(--muted)}.odl .odg .tx{flex:1;min-width:0}.odl .odg i{font-style:normal;color:var(--muted);font-size:13px}.odl .gin{padding-left:14px}
 /* Am Schreibtisch: Als Nächstes und Zeitplan nebeneinander */
 @media (min-width:1000px){
   .shell{max-width:1184px}
@@ -272,7 +272,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="27";
+const APP_V="28";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -329,6 +329,11 @@ const checkTxt=z=>{const v=parseFloat(String(z.lueckencheck??"").replace(",","."
 const isUnk=z=>/^unklar$/i.test(String(z.status||"").trim())&&!zpDone(z);
 const zpLate=z=>isMin(z)&&!isTermin(z)&&!zpDone(z)&&!isNach(z)&&d10(z.ende)&&d10(z.ende)<TODAY();
 function overdue(){return st.zp.filter(zpLate);}
+/* Feste Lernkurs-Bausteine (Julys Entscheidung 20.11.): Rückstand als Zeit, nach Lektion gruppiert, einzelne Bausteine erst beim Antippen */
+const isBst=z=>/^kurs-baustein$/i.test(String(z.art||"").trim());
+const bMin=z=>{const m=String(z.hinweis||"").match(/ca\. (\d+) Min/);return m?+m[1]:30;};
+const bLes=z=>{const m=String(z.hinweis||"").match(/^Lernkurs (L\d+ [^,]+),/);return m?m[1]:(String(z.titel||"").match(/^L\d+/)||["Lernkurs"])[0];};
+const fmtMin=m=>m<60?"ca. "+m+" Min.":m<600?"ca. "+fmtH1(m/60)+" Std.":"ca. "+Math.round(m/60)+" Std.";
 /* Eigenes Plan-Datum (ende) und echte Frist (frist) getrennt zeigen: überfällig ab Plan-Datum, kritisch erst 3 Tage vor der echten Frist */
 const fristLeft=z=>{const f=day(z.frist),t=day(TODAY());return f&&t?Math.round((f-t)/864e5):null;};
 const zpCrit=z=>!!z.frist&&!zpDone(z)&&!isTermin(z)&&fristLeft(z)<=3;
@@ -408,8 +413,11 @@ function vOd(){ // Liste der überfälligen Aufgaben, über "x Aufgaben aus frü
   const nh=st.odOpen==="nh";const ttl=nh?"Zum Nachholen":"Aus früheren Wochen offen";
   const od=nh?nachList():overdue().slice().sort((a,b)=>d10(a.ende).localeCompare(d10(b.ende)));
   const wk=z=>{const a=day(z.woche),f=day(FIRST);return a&&f?"Woche "+(Math.round((a-f)/(7*864e5))+1):"";};
-  const rows=od.map(z=>{const sub=[KURS[z.kurs]||z.kurs||"",wk(z),isTermin(z)?"":`${dm(z.start)}–${dm(z.ende)}`].filter(Boolean).join(" · ");
-    return `<div class="row"><button class="ck ${nh?"":isUnk(z)?"unk":"late"}" data-tog="zp:${esc(z.id)}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(z.titel)}</span><span class="s">${esc(sub)}</span></span>${nh?`<span class="tag">bis ${esc(dm(z.ende))}</span>`:z.frist?fristChip(z,"tag"):`<span class="tag late">seit ${esc(dm(z.ende))}</span>`}</div>`;}).join("");
+  const row1=z=>{const sub=isBst(z)?fmtMin(bMin(z)):[KURS[z.kurs]||z.kurs||"",wk(z),isTermin(z)?"":`${dm(z.start)}–${dm(z.ende)}`].filter(Boolean).join(" · ");
+    return `<div class="row"><button class="ck ${nh?"":isUnk(z)?"unk":"late"}" data-tog="zp:${esc(z.id)}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(isBst(z)?String(z.titel).replace(/^L\d+ /,""):z.titel)}</span><span class="s">${esc(sub)}</span></span>${nh?`<span class="tag">bis ${esc(dm(z.ende))}</span>`:z.frist?fristChip(z,"tag"):`<span class="tag late">seit ${esc(dm(z.ende))}</span>`}</div>`;};
+  const groups=[];od.filter(isBst).forEach(z=>{const k=bLes(z);let g=groups.find(x=>x.k===k);if(!g){g={k,l:[]};groups.push(g);}g.l.push(z);});
+  const rows=od.filter(z=>!isBst(z)).map(row1).join("")+groups.map(g=>{const open=st.odx===g.k,m=g.l.reduce((a,z)=>a+bMin(z),0);
+    return `<button class="odg" data-odx="${esc(g.k)}" aria-expanded="${open}"><span class="tx"><span class="t">Statistik ${esc(g.k)}</span><span class="s">${g.l.length} ${g.l.length===1?"Baustein":"Bausteine"} · ${fmtMin(m)}</span></span><i>${open?"zuklappen":"anzeigen"}</i></button>${open?`<div class="gin">${g.l.map(row1).join("")}</div>`:""}`;}).join("");
   return `<div class="sheet"><button data-odclose aria-label="Schließen"></button><div class="p" role="dialog" aria-label="${ttl}">
   <div class="h"><h2>${ttl}</h2><button data-odclose>Fertig</button></div><div class="l odl">${rows||`<p class="none">Alles erledigt.</p>`}</div></div></div>`;
 }
@@ -422,14 +430,17 @@ function vNext(){
     ?`<p class="date">${date}</p><div class="empty" role="status"><b>Keine Verbindung</b>Dein Stand kommt aus deiner Tabelle. Sobald du online bist, lädt er von selbst.</div><button class="done sec" data-retry>${REFRESH}Erneut versuchen</button>`
     :`<p class="date">${date}</p><div class="empty"><b>Lädt …</b>Der Stand kommt aus deiner Tabelle.</div>`;
   const od=overdue();const n=od.length;const nN=nachList().length;const nV=vertSum();
-  const by={};od.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+1);
+  const odB=od.filter(isBst),odA=od.filter(z=>!isBst(z)),odM=odB.reduce((a,z)=>a+bMin(z),0);
+  const odTxt=[odA.length?odA.length+" "+(odA.length===1?"Aufgabe":"Aufgaben"):"",odB.length?fmtMin(odM)+" Lernkurs ("+odB.length+" "+(odB.length===1?"Baustein":"Bausteine")+")":""].filter(Boolean).join(" und ");
+  const odPl=odA.length+(odB.length?1:0)>1||odA.length>1;
+  const by={};odA.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+1);odB.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+bMin(z)/30);
   const mx=Math.max(0,...Object.values(by));const top=Object.keys(by).filter(k=>by[k]===mx).map(k=>KURS[k]||k);
   const most=n>1&&top.length<=2?` Am meisten bei ${top.join(" und ")}.`:"";
   const crit=st.zp.filter(z=>zpCrit(z)&&isMin(z));
   const head=crit.length?"Es wird knapp.":n?"Du hängst hinterher.":"Du bist im Plan.";
   const critTxt=crit.length?crit.map(z=>`${z.titel}: ${fristLeft(z)<0?"Frist verpasst":"echte Frist "+dm(z.frist)+", "+leftTxt(fristLeft(z))}.`).join(" ")+" ":"";
   const calm=!crit.length&&od.some(z=>z.frist||st.zp.some(q=>q.frist&&q.gruppe===z.gruppe&&!zpDone(q)))?" Die echten Fristen sind noch nicht erreicht.":"";
-  const sum=esc(critTxt)+(n?`<button class="sl" data-od aria-haspopup="dialog">${n} ${n===1?"Aufgabe":"Aufgaben"} aus früheren Wochen</button> ${n===1?"ist":"sind"} noch offen.${esc(most)}${esc(calm)}`:"Alles aus früheren Wochen ist erledigt.")+(nN?` <button class="sl" data-nh aria-haspopup="dialog">${nN} zum Nachholen</button> ${nN===1?"ist":"sind"} eingeplant, das zählt nicht als Rückstand.`:"");
+  const sum=esc(critTxt)+(n?`<button class="sl" data-od aria-haspopup="dialog">${esc(odTxt)} aus früheren Wochen</button> ${odPl?"sind":"ist"} noch offen.${esc(most)}${esc(calm)}`:"Alles aus früheren Wochen ist erledigt.")+(nN?` <button class="sl" data-nh aria-haspopup="dialog">${nN} zum Nachholen</button> ${nN===1?"ist":"sind"} eingeplant, das zählt nicht als Rückstand.`:"");
   const q=queueList();const run=running();
   /* Gewählte Aufgabe vor laufender Uhr vor Empfehlung: July kann jederzeit etwas anderes nehmen */
   const byPick=st.pick?q.find(r=>String(r.id)===String(st.pick)):null;
@@ -654,6 +665,7 @@ document.addEventListener("click",e=>{
   if(q("[data-od]")){st.odOpen="od";render();return;}
   if(q("[data-nh]")){st.odOpen="nh";render();return;}
   if(q("[data-odclose]")){st.odOpen=false;render();return;}
+  {const gx=q("[data-odx]");if(gx){st.odx=st.odx===gx.dataset.odx?null:gx.dataset.odx;render();return;}}
   if(q("[data-retry]")){st.net="";render();sync().then(ok=>{if(!ok&&st.net!=="key")toast("Noch keine Verbindung");});return;}
   const g=e.target.closest("[data-go]");if(g&&!g.disabled){st.wi=+g.dataset.go;if(g.hasAttribute("data-close"))st.sheet=false;render();$("#main").scrollTop=0;return;}
   if(e.target.closest("[data-sheet]")){st.sheet=true;render();return;}
