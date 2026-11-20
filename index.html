@@ -272,7 +272,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="29";
+const APP_V="30";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -435,11 +435,11 @@ function vNext(){
   const odPl=odA.length+(odB.length?1:0)>1||odA.length>1;
   const by={};odA.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+1);odB.forEach(z=>by[z.kurs]=(by[z.kurs]||0)+bMin(z)/30);
   const mx=Math.max(0,...Object.values(by));const top=Object.keys(by).filter(k=>by[k]===mx).map(k=>KURS[k]||k);
-  const most=n>1&&top.length<=2?` Am meisten bei ${top.join(" und ")}.`:"";
+  const nK=Object.keys(by).length;const most=nK===1?` Alles davon ist ${KURS[Object.keys(by)[0]]||Object.keys(by)[0]}.`:n>1&&top.length<=2?` Am meisten bei ${top.join(" und ")}.`:"";   /* nur ein Kurs: sagen, welcher, statt "am meisten" (Julys Frage 20.11.) */
   const crit=st.zp.filter(z=>zpCrit(z)&&isMin(z));
   const head=crit.length?"Es wird knapp.":n?"Du hängst hinterher.":"Du bist im Plan.";
   const critTxt=crit.length?crit.map(z=>`${z.titel}: ${fristLeft(z)<0?"Frist verpasst":"echte Frist "+dm(z.frist)+", "+leftTxt(fristLeft(z))}.`).join(" ")+" ":"";
-  const calm=!crit.length&&od.some(z=>z.frist||st.zp.some(q=>q.frist&&q.gruppe===z.gruppe&&!zpDone(q)))?" Die echten Fristen sind noch nicht erreicht.":"";
+  const nxF=st.zp.filter(z=>z.frist&&!zpDone(z)&&!isTermin(z)&&d10(z.frist)>=TODAY()).sort((a,b)=>d10(a.frist).localeCompare(d10(b.frist)))[0];const calm=!crit.length&&n?" Das sind deine eigenen Plan-Daten. Eine Uni-Frist ist noch nicht verpasst"+(nxF?`, die nächste ist ${nxF.titel} am ${dm(nxF.frist)}`:"."):"";   /* klarer als "echte Fristen noch nicht erreicht" (Julys Frage 20.11.) */
   const sum=esc(critTxt)+(n?`<button class="sl" data-od aria-haspopup="dialog">${esc(odTxt)} aus früheren Wochen</button> ${odPl?"sind":"ist"} noch offen.${esc(most)}${esc(calm)}`:"Alles aus früheren Wochen ist erledigt.")+(nN?` <button class="sl" data-nh aria-haspopup="dialog">${nN} zum Nachholen</button> ${nN===1?"ist":"sind"} eingeplant, das zählt nicht als Rückstand.`:"");
   const q=queueList();const run=running();
   /* Gewählte Aufgabe vor laufender Uhr vor Empfehlung: July kann jederzeit etwas anderes nehmen */
