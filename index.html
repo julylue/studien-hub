@@ -272,7 +272,7 @@ const API="https://script.google.com/macros/s/AKfycby527965MYC7xpuzDuMsJ867wvj5l
 const KURS={Psy:"Psychologie",Stat:"Statistik",FoM:"Forschungsmethoden",KuV:"Kulturelle Vielfalt",WisA:"Wiss. Arbeiten",Orga:"Organisation"};
 const FIRST="2026-10-12", WEEKS=20;
 /* Neue Version erkennen: version.json wird bei jeder Veröffentlichung hochgezählt, dann lädt die App sich selbst neu */
-const APP_V="31";
+const APP_V="32";
 async function checkVersion(){try{const j=await fetch("version.json?x="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(j&&j.v&&String(j.v)!==APP_V){location.reload();return true;}}catch(_){}return false;}
 const PAUSE={"2026-12-21":"Betreuungspause. Laut Zeitplan keine neuen Aufgaben.","2027-02-08":"Selbständige Wiederholung.","2027-02-15":"Selbständige Wiederholung. Klausuranmeldung bis 15.02."};
 const $=s=>document.querySelector(s);
@@ -414,7 +414,7 @@ function vOd(){ // Liste der überfälligen Aufgaben, über "x Aufgaben aus frü
   const od=nh?nachList():overdue().slice().sort((a,b)=>d10(a.ende).localeCompare(d10(b.ende)));
   const wk=z=>{const a=day(z.woche),f=day(FIRST);return a&&f?"Woche "+(Math.round((a-f)/(7*864e5))+1):"";};
   const row1=z=>{const sub=isBst(z)?"Lernkurs":[KURS[z.kurs]||z.kurs||"",wk(z),isTermin(z)?"":`${dm(z.start)}–${dm(z.ende)}`].filter(Boolean).join(" · ");
-    return `<div class="row"><button class="ck ${nh?"":isUnk(z)?"unk":"late"}" data-tog="zp:${esc(z.id)}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(isBst(z)?String(z.titel).replace(/^L\d+ /,""):z.titel)}</span><span class="s">${esc(sub)}</span></span>${nh?`<span class="tag">bis ${esc(dm(z.ende))}</span>`:z.frist?fristChip(z,"tag"):`<span class="tag late">seit ${esc(dm(z.ende))}</span>`}</div>`;};
+    return `<div class="row"><button class="ck ${nh?"":isUnk(z)?"unk":"late"}" data-tog="zp:${esc(z.id)}" aria-label="${esc(z.titel)} abhaken"><span>${CHECK}</span></button><span class="tx"><span class="t">${esc(isBst(z)?String(z.titel).replace(/^L\d+ /,"").replace(/^[^·]+ · /,""):z.titel)}</span><span class="s">${esc(sub)}</span></span>${nh?`<span class="tag">bis ${esc(dm(z.ende))}</span>`:z.frist?fristChip(z,"tag"):`<span class="tag late">seit ${esc(dm(z.ende))}</span>`}</div>`;};
   const groups=[];od.filter(isBst).forEach(z=>{const k=bLes(z);let g=groups.find(x=>x.k===k);if(!g){g={k,l:[]};groups.push(g);}g.l.push(z);});
   const rows=od.filter(z=>!isBst(z)).map(row1).join("")+groups.map(g=>{const open=st.odx===g.k;
     return `<button class="odg" data-odx="${esc(g.k)}" aria-expanded="${open}"><span class="tx"><span class="t">Statistik ${esc(g.k)}</span><span class="s">${g.l.length} ${g.l.length===1?"Baustein":"Bausteine"}</span></span><i>${open?"zuklappen":"anzeigen"}</i></button>${open?`<div class="gin">${g.l.map(row1).join("")}</div>`:""}`;}).join("");
